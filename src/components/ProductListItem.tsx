@@ -20,10 +20,12 @@ export default ProductListItem;
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         backgroundColor: 'white',
         padding: 10,
         borderRadius: 20,
         overflow: 'hidden',
+        maxWidth: '50%'
     },
     image: {
         width: '100%',
