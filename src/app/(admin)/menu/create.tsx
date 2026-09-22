@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, Image, TextInput } from 'react-native';
-import React, { useState } from 'react';
+import {View, Text, StyleSheet, Image, TextInput, Alert} from 'react-native';
+import React, {useState} from 'react';
 import {defaultPizzaImage} from "@components/ProductListItem";
 import Colors from "@/constants/Colors";
 import Button from '@components/Button';
 import * as ImagePicker from 'expo-image-picker';
-import {Stack, useRouter } from 'expo-router';
+import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {MediaType} from "expo-image-picker/src/ImagePicker.types";
 
 
@@ -13,6 +13,9 @@ const CreateScreen = () => {
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
     const [errors, setErrors] = useState('');
+
+    const {id} = useLocalSearchParams()
+    const isUpdating = !!id
 
     const router = useRouter();
 
@@ -33,17 +36,56 @@ const CreateScreen = () => {
         return true;
     };
 
+    const resetFields = () => {
+        setName('');
+        setPrice('');
+        setImage('');
+    }
+
+    const onSubmit = () => {
+        if (isUpdating) {
+            onUpdate()
+        } else {
+            onCreate()
+        }
+    }
+
+    const onUpdate = () => {
+        if (!validateInput()) {
+            return;
+        }
+
+        console.warn('Updating dish');
+        resetFields()
+        router.back();
+    };
+
     const onCreate = () => {
         if (!validateInput()) {
             return;
         }
 
         console.warn('Creating dish');
-        setName('');
-        setPrice('');
-        setImage('');
+        resetFields()
         router.back();
     };
+
+    const onDelete = () => {
+
+    }
+
+    const onConfirmDelete = () => {
+        Alert.alert("Confirm", "Are you sure you want to delete this product", [
+            {
+                text: "Cancel",
+            },
+            {
+                text: "Delete",
+                style: "destructive",
+                onPress: onDelete,
+            }
+        ]);
+    }
 
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
@@ -62,9 +104,9 @@ const CreateScreen = () => {
     };
     return (
         <View style={styles.container}>
-            <Stack.Screen options={{title: 'Create Product'}} />
+            <Stack.Screen options={{title: isUpdating ? 'Update Product' : 'Create Product'}}/>
             <Image
-                source={{ uri: image || defaultPizzaImage }}
+                source={{uri: image || defaultPizzaImage}}
                 style={styles.image}
                 resizeMode="contain"
             />
@@ -89,7 +131,8 @@ const CreateScreen = () => {
                 keyboardType="numeric"
             />
             <Text style={styles.error}>{errors}</Text>
-            <Button onPress={onCreate} text="Create" />
+            <Button onPress={onSubmit} text={isUpdating ? "Update" : "Create"}/>
+            {isUpdating && <Text onPress={onConfirmDelete} style={styles.textButton}>Delete</Text>}
         </View>
     );
 };

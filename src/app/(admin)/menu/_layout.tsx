@@ -24,22 +24,5 @@ export default function MenuStack() {
             ),
         }}/>
 
-        <Stack.Screen name='[id]' options={{
-            title: 'Menu',
-            headerRight: () => (
-                <Link href="/" asChild>
-                    <Pressable style={{marginRight: 15}}>
-                        {({pressed}) => (
-                            <SymbolView
-                                name={{ios: 'pencil', android: 'shopping_cart', web: 'shopping_cart'}}
-                                size={25}
-                                tintColor={Colors.light.tint}
-                                style={{opacity: pressed ? 0.5 : 1}}
-                            />
-                        )}
-                    </Pressable>
-                </Link>
-            ),
-        }}/>
     </Stack>
 }
