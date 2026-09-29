@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "dayjs": "^1.11.23",
     "expo": "~57.0.22",
     "expo-constants": "~57.0.18",
     "expo-crypto": "~57.0.3",
