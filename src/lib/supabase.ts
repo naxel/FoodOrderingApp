@@ -14,7 +14,7 @@ const ExpoSecureStoreAdapter = {
     },
 };
 
-const supabaseUrl = 'https://your-project.supabase.co';
+const supabaseUrl = 'https://fhrlvqncmpwpaynosgdm.supabase.co';
 const supabaseAnonKey = 'SUPABASE_PUBLISHABLE_KEY';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
