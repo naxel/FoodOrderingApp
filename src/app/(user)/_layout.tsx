@@ -10,9 +10,10 @@ import {useAuth} from "@/providers/AuthProvider";
 export default function TabLayout() {
     const colorScheme = useColorScheme();
     const {session} = useAuth()
+    const headerShown = useClientOnlyValue(false, true)
 
-    if (session) {
-        return <Redirect href={'/'} />
+    if (!session) {
+        return <Redirect href={'/sign-in'} />
     }
 
     return (
@@ -21,7 +22,7 @@ export default function TabLayout() {
                 tabBarActiveTintColor: Colors[colorScheme].tint,
                 // Disable the static render of the header on web
                 // to prevent a hydration error in React Navigation v6.
-                headerShown: useClientOnlyValue(false, true),
+                headerShown,
             }}>
             <Tabs.Screen name="index" options={{href: null}}/>
             <Tabs.Screen

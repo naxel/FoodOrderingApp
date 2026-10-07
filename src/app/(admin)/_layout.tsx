@@ -1,13 +1,17 @@
 import {SymbolView} from 'expo-symbols';
-import {Link, Tabs} from 'expo-router';
-import {Platform, Pressable} from 'react-native';
+import {Redirect, Tabs} from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import {useColorScheme} from '@/components/useColorScheme';
 import {useClientOnlyValue} from '@/components/useClientOnlyValue';
+import {useAuth} from "@/providers/AuthProvider";
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
+    const { isAdmin } = useAuth()
+    if (!isAdmin) {
+        return <Redirect href="/" />;
+    }
 
     return (
         <Tabs
