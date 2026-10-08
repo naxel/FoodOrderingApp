@@ -48,8 +48,34 @@ export const useInsertProduct = () => {
             }
             return newProduct;
         },
-        onSuccess: async (data: any) => {
+        onSuccess: async () => {
             await queryClient.invalidateQueries(['products'])
+        },
+    })
+}
+
+export const useUpdateProduct = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: any) => {
+            const {error, data: updatedProduct} = await supabase
+                .from('products')
+                .update({
+                    name: data.name,
+                    image: data.image,
+                    price: data.price,
+                })
+                .eq('id', data.id)
+                .select()
+                .single()
+            if (error) {
+                throw new Error(error.message);
+            }
+            return updatedProduct;
+        },
+        onSuccess: async (_, {id}: any) => {
+            await queryClient.invalidateQueries(['products'])
+            await queryClient.invalidateQueries(['products', id])
         },
     })
 }

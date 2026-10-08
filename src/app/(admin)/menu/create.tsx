@@ -1,12 +1,12 @@
 import {View, Text, StyleSheet, Image, TextInput, Alert} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {defaultPizzaImage} from "@components/ProductListItem";
 import Colors from "@/constants/Colors";
 import Button from '@components/Button';
 import * as ImagePicker from 'expo-image-picker';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {MediaType} from "expo-image-picker/src/ImagePicker.types";
-import {useInsertProduct} from "@/api/products";
+import {useInsertProduct, useProduct, useUpdateProduct} from "@/api/products";
 
 
 const CreateScreen = () => {
@@ -15,12 +15,23 @@ const CreateScreen = () => {
     const [price, setPrice] = useState('');
     const [errors, setErrors] = useState('');
 
-    const {id} = useLocalSearchParams()
-    const isUpdating = !!id
+    const {id: idString} = useLocalSearchParams()
+    const isUpdating = !!idString
 
     const {mutate: insertProduct} = useInsertProduct()
+    const {mutate: updateProduct} = useUpdateProduct()
+    const id = parseFloat(typeof idString === 'string' ? idString : idString?.[0])
+    const {data: updatingProduct, error, isLoading} = useProduct(id)
 
     const router = useRouter();
+
+    useEffect(() => {
+        if (updatingProduct) {
+            setName(updatingProduct.name)
+            setPrice(updatingProduct.price.toString())
+            setImage(updatingProduct.image)
+        }
+    }, [updatingProduct])
 
     const validateInput = () => {
         setErrors('');
@@ -59,6 +70,12 @@ const CreateScreen = () => {
         }
 
         console.warn('Updating dish');
+        updateProduct({id, name, price: parseFloat(price), image}, {
+            onSuccess: () => {
+                resetFields()
+                router.back();
+            }
+        })
         resetFields()
         router.back();
     };
@@ -70,7 +87,7 @@ const CreateScreen = () => {
 
         console.warn('Creating dish');
         insertProduct({name, price: parseFloat(price), image}, {
-            onSuccess: ()=>{
+            onSuccess: () => {
                 resetFields()
                 router.back();
             }
