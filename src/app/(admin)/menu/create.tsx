@@ -6,6 +6,7 @@ import Button from '@components/Button';
 import * as ImagePicker from 'expo-image-picker';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {MediaType} from "expo-image-picker/src/ImagePicker.types";
+import {useInsertProduct} from "@/api/products";
 
 
 const CreateScreen = () => {
@@ -16,6 +17,8 @@ const CreateScreen = () => {
 
     const {id} = useLocalSearchParams()
     const isUpdating = !!id
+
+    const {mutate: insertProduct} = useInsertProduct()
 
     const router = useRouter();
 
@@ -66,8 +69,12 @@ const CreateScreen = () => {
         }
 
         console.warn('Creating dish');
-        resetFields()
-        router.back();
+        insertProduct({name, price: parseFloat(price), image}, {
+            onSuccess: ()=>{
+                resetFields()
+                router.back();
+            }
+        })
     };
 
     const onDelete = () => {
