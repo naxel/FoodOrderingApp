@@ -2,14 +2,19 @@ import {FlatList, Text, View, StyleSheet, Pressable, ActivityIndicator} from 're
 import {useLocalSearchParams, Stack} from "expo-router";
 import OrderListItem from "@components/OrderListItem";
 import OrderItemListItem from "@components/OrderItemListItem";
-import {OrderStatusList} from "@/types";
+import {OrderStatus, OrderStatusList} from "@/types";
 import Colors from "@/constants/Colors";
-import {useOrderDetails} from "@/api/orders";
+import {useOrderDetails, useUpdateOrder} from "@/api/orders";
 
 const OrderDetailScreen = () => {
     const {id: idString} = useLocalSearchParams()
     const id = parseFloat(typeof idString === 'string' ? idString : idString[0])
     const {data: order, error, isLoading} = useOrderDetails(id)
+    const {mutate: updateOrder} = useUpdateOrder()
+
+    const updateStatus = (status: OrderStatus) => {
+        updateOrder({id, updatedFields: {status}})
+    }
 
     if (isLoading) {
         return <ActivityIndicator/>
@@ -35,7 +40,7 @@ const OrderDetailScreen = () => {
                             {OrderStatusList.map((status) => (
                                 <Pressable
                                     key={status}
-                                    onPress={() => console.warn('Update status')}
+                                    onPress={() => updateStatus(status)}
                                     style={{
                                         borderColor: Colors.light.tint,
                                         borderWidth: 1,
