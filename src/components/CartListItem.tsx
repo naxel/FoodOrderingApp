@@ -1,11 +1,11 @@
-import {View, Text, StyleSheet, Image, Pressable} from 'react-native';
+import {View, Text, StyleSheet, Pressable} from 'react-native';
 import React from 'react';
 import Colors from '../constants/Colors';
 import {CartItem} from "@/types";
-import {Link} from 'expo-router';
 import {defaultPizzaImage} from "@components/ProductListItem";
 import {useCart} from "@/providers/CartProvider";
 import {SymbolView} from "expo-symbols";
+import RemoteImage from "@components/RemoteImage";
 
 type CartListItemProps = {
     cartItem: CartItem;
@@ -15,8 +15,9 @@ const CartListItem = ({cartItem}: CartListItemProps) => {
     const {updateQuantity} = useCart();
     return (
         <View style={styles.container}>
-            <Image
-                source={{uri: cartItem.product.image || defaultPizzaImage}}
+            <RemoteImage
+                fallback={defaultPizzaImage}
+                path={cartItem.product?.image}
                 style={styles.image}
                 resizeMode="contain"
             />

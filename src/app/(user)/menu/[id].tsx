@@ -1,4 +1,4 @@
-import {Image, Text, View, StyleSheet, Pressable, ActivityIndicator} from "react-native";
+import {Text, View, StyleSheet, Pressable, ActivityIndicator} from "react-native";
 import {Stack, useLocalSearchParams, useRouter} from "expo-router";
 import {defaultPizzaImage} from "@components/ProductListItem";
 import {useState} from "react";
@@ -6,6 +6,7 @@ import Button from "@components/Button";
 import {useCart} from "@/providers/CartProvider";
 import {PizzaSize} from "@/types";
 import {useProduct} from "@/api/products";
+import RemoteImage from "@components/RemoteImage";
 
 const sizes: PizzaSize[] = ['S', 'M', 'L', 'XL'];
 
@@ -37,7 +38,12 @@ const ProductDetailsScreen = () => {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{title: product?.name}}/>
-            <Image source={{uri: product?.image || defaultPizzaImage}} style={styles.image}/>
+            <RemoteImage
+                fallback={defaultPizzaImage}
+                path={product?.image}
+                style={styles.image}
+                resizeMode="contain"
+            />
             <Text style={styles.price}>Select size</Text>
             <View style={styles.sizes}>
                 {sizes.map((size) => (
@@ -58,7 +64,7 @@ const ProductDetailsScreen = () => {
                     </Pressable>
                 ))}
             </View>
-            <Text style={styles.price}>${product.price}</Text>
+            <Text style={styles.price}>${product?.price}</Text>
             <Button onPress={addToCart} text="Add to cart"/>
         </View>
     );
