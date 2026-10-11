@@ -67,13 +67,13 @@ const CreateScreen = () => {
         }
     }
 
-    const onUpdate = () => {
+    const onUpdate = async () => {
         if (!validateInput()) {
             return;
         }
 
-        console.warn('Updating dish');
-        updateProduct({id, name, price: parseFloat(price), image}, {
+        const imagePath = await uploadImage()
+        updateProduct({id, name, price: parseFloat(price), image: imagePath}, {
             onSuccess: () => {
                 resetFields()
                 router.back();
