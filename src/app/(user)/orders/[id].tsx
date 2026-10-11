@@ -14,7 +14,7 @@ const OrderDetailScreen = () => {
     if (isLoading) {
         return <ActivityIndicator/>
     }
-    if (error) {
+    if (error || !order) {
         return <Text>Failed to fetch order</Text>
     }
 

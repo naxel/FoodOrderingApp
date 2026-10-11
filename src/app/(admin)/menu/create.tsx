@@ -7,7 +7,9 @@ import * as ImagePicker from 'expo-image-picker';
 import {Stack, useLocalSearchParams, useRouter} from 'expo-router';
 import {MediaType} from "expo-image-picker/src/ImagePicker.types";
 import {useDeleteProduct, useInsertProduct, useProduct, useUpdateProduct} from "@/api/products";
-
+import {randomUUID} from "expo-crypto";
+import {supabase} from "@/lib/supabase";
+import {File} from 'expo-file-system'
 
 const CreateScreen = () => {
     const [image, setImage] = useState<string | null>(null);
@@ -81,13 +83,14 @@ const CreateScreen = () => {
         router.back();
     };
 
-    const onCreate = () => {
+    const onCreate = async () => {
         if (!validateInput()) {
             return;
         }
 
-        console.warn('Creating dish');
-        insertProduct({name, price: parseFloat(price), image}, {
+        const imagePath = await uploadImage()
+
+        insertProduct({name, price: parseFloat(price), image: imagePath}, {
             onSuccess: () => {
                 resetFields()
                 router.back();
@@ -132,6 +135,23 @@ const CreateScreen = () => {
             setImage(result.assets[0].uri);
         }
     };
+    const uploadImage = async () => {
+        if (!image?.startsWith('file://')) {
+            return;
+        }
+
+        const arrayBuffer = await new File(image).arrayBuffer();
+        const filePath = `${randomUUID()}.png`;
+        const contentType = 'image/png';
+        const {data, error} = await supabase.storage
+            .from('product-images')
+            .upload(filePath, arrayBuffer, {contentType});
+
+        if (data) {
+            return data.path;
+        }
+    };
+
     return (
         <View style={styles.container}>
             <Stack.Screen options={{title: isUpdating ? 'Update Product' : 'Create Product'}}/>
