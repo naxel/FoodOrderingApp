@@ -61,6 +61,23 @@ export default function TabLayout() {
                     ),
                 }}
             />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Profile',
+                    tabBarIcon: ({color}) => (
+                        <SymbolView
+                            name={{
+                                ios: 'person',
+                                android: 'person',
+                                web: 'person',
+                            }}
+                            tintColor={color}
+                            size={20}
+                        />
+                    ),
+                }}
+            />
         </Tabs>
     );
 }
