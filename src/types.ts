@@ -1,15 +1,14 @@
 import { Database } from './database.types';
 
 export type Tables<T extends keyof Database['public']['Tables']> =
-    Database['public']['Tables'][T]['Row'];
+  Database['public']['Tables'][T]['Row'];
 export type InsertTables<T extends keyof Database['public']['Tables']> =
-    Database['public']['Tables'][T]['Insert'];
+  Database['public']['Tables'][T]['Insert'];
 export type UpdateTables<T extends keyof Database['public']['Tables']> =
-    Database['public']['Tables'][T]['Update'];
-export type Enums<T extends keyof Database['public']['Enums']> =
-    Database['public']['Enums'][T];
+  Database['public']['Tables'][T]['Update'];
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
 
-export type Product = Tables<'products'>
+export type Product = Tables<'products'>;
 
 export type PizzaSize = 'S' | 'M' | 'L' | 'XL';
 
@@ -21,16 +20,11 @@ export type CartItem = {
   quantity: number;
 };
 
-export const OrderStatusList: OrderStatus[] = [
-  'New',
-  'Cooking',
-  'Delivering',
-  'Delivered',
-];
+export const OrderStatusList: OrderStatus[] = ['New', 'Cooking', 'Delivering', 'Delivered'];
 
 export type OrderStatus = 'New' | 'Cooking' | 'Delivering' | 'Delivered';
 
-export type Order = Tables<'orders'>
+export type Order = Tables<'orders'>;
 
 export type OrderItem = {
   id: number;

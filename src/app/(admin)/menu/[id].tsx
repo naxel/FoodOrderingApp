@@ -1,74 +1,74 @@
-import {Text, View, StyleSheet, Pressable, ActivityIndicator} from "react-native";
-import {Link, Stack, useLocalSearchParams} from "expo-router";
-import {defaultPizzaImage} from "@components/ProductListItem";
-import {SymbolView} from "expo-symbols";
-import Colors from "@/constants/Colors";
-import {useProduct} from "@/api/products";
-import RemoteImage from "@components/RemoteImage";
+import { Text, View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { defaultPizzaImage } from '@components/ProductListItem';
+import { SymbolView } from 'expo-symbols';
+import Colors from '@/constants/Colors';
+import { useProduct } from '@/api/products';
+import RemoteImage from '@components/RemoteImage';
 
 const ProductDetailsScreen = () => {
-    const {id: idString} = useLocalSearchParams()
-    const id = parseFloat(typeof idString === 'string' ? idString : idString[0])
-    const {data: product, error, isLoading} = useProduct(id)
+  const { id: idString } = useLocalSearchParams();
+  const id = parseFloat(typeof idString === 'string' ? idString : idString[0]);
+  const { data: product, error, isLoading } = useProduct(id);
 
-    if (isLoading) {
-        return <ActivityIndicator/>
-    }
-    if (error) {
-        return <Text>Failed to fetch products</Text>
-    }
-    return (
-        <View style={styles.container}>
-            <Stack.Screen
-                options={{
-                    title: 'Menu',
-                    headerRight: () => (
-                        <Link href={`/(admin)/menu/create?id=${id}`} asChild>
-                            <Pressable style={{marginRight: 15}}>
-                                {({pressed}) => (
-                                    <SymbolView
-                                        name={{ios: 'pencil', android: 'shopping_cart', web: 'shopping_cart'}}
-                                        size={25}
-                                        tintColor={Colors.light.tint}
-                                        style={{opacity: pressed ? 0.5 : 1}}
-                                    />
-                                )}
-                            </Pressable>
-                        </Link>
-                    ),
-                }}/>
-            <Stack.Screen options={{title: product?.name}}/>
-            <RemoteImage
-                fallback={defaultPizzaImage}
-                path={product?.image}
-                style={styles.image}
-                resizeMode="contain"
-            />
-            <Text style={styles.title}>{product?.name}</Text>
-            <Text style={styles.price}>${product?.price}</Text>
-        </View>
-    );
-}
+  if (isLoading) {
+    return <ActivityIndicator />;
+  }
+  if (error) {
+    return <Text>Failed to fetch products</Text>;
+  }
+  return (
+    <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: 'Menu',
+          headerRight: () => (
+            <Link href={`/(admin)/menu/create?id=${id}`} asChild>
+              <Pressable style={{ marginRight: 15 }}>
+                {({ pressed }) => (
+                  <SymbolView
+                    name={{ ios: 'pencil', android: 'shopping_cart', web: 'shopping_cart' }}
+                    size={25}
+                    tintColor={Colors.light.tint}
+                    style={{ opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
+          ),
+        }}
+      />
+      <Stack.Screen options={{ title: product?.name }} />
+      <RemoteImage
+        fallback={defaultPizzaImage}
+        path={product?.image}
+        style={styles.image}
+        resizeMode="contain"
+      />
+      <Text style={styles.title}>{product?.name}</Text>
+      <Text style={styles.price}>${product?.price}</Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: "white",
-        padding: 10,
-        flex: 1,
-    },
-    image: {
-        width: '100%',
-        aspectRatio: 1,
-
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: "bold",
-    },
-    price: {
-        fontSize: 18,
-        fontWeight: "bold",
-    },
-})
+  container: {
+    backgroundColor: 'white',
+    padding: 10,
+    flex: 1,
+  },
+  image: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
 
 export default ProductDetailsScreen;
