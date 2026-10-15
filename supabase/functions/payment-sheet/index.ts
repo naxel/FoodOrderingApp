@@ -36,7 +36,7 @@ export default {
 
       const res = {
         paymentIntent: paymentIntent.client_secret,
-        publishableKey: Deno.env.get('STRIPE_SECRET_KEY'),
+        publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
       };
 
       return new Response(JSON.stringify(res), {
