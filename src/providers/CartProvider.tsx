@@ -3,8 +3,8 @@ import { CartItem, Product, Tables } from '@/types';
 import { randomUUID } from 'expo-crypto';
 import { useInsertOrder } from '@/api/orders';
 import { useRouter } from 'expo-router';
-import orders from '@assets/data/orders';
 import { useInsertOrderItems } from '@/api/order-items';
+import { initialisePaymentSheet, openPaymentSheet } from '@/lib/stripe';
 
 type CartType = {
   items: CartItem[];
@@ -59,8 +59,13 @@ const CartProvider = ({ children }: PropsWithChildren) => {
     setItems([]);
   };
 
-  const checkout = () => {
+  const checkout = async () => {
     console.warn('Checkout');
+    await initialisePaymentSheet(Math.floor(total * 100));
+    const payload = await openPaymentSheet();
+    if (!payload) {
+      return;
+    }
     insertOrder(
       { total },
       {
