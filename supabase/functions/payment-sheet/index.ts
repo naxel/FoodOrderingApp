@@ -29,11 +29,19 @@ export default {
       }
       */
       const customerId = await createOrRetrieveProfile(ctx);
-      // Create an ephermeralKey so that the Stripe SDK can fetch the customer's stored payment methods.
-      const ephemeralKey = await stripe.ephemeralKeys.create(
-        { customer: customerId },
-        { apiVersion: '2020-08-27' },
-      );
+      const customerSession = await stripe.customerSessions.create({
+        customer: customerId,
+        components: {
+          mobile_payment_element: {
+            enabled: true,
+            features: {
+              payment_method_save: 'enabled',
+              payment_method_redisplay: 'enabled',
+              payment_method_remove: 'enabled',
+            },
+          },
+        },
+      });
 
       const { amount } = await req.json();
       const paymentIntent = await stripe.paymentIntents.create({
@@ -46,7 +54,7 @@ export default {
       const res = {
         publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
         paymentIntent: paymentIntent.client_secret,
-        ephemeralKey: ephemeralKey.secret,
+        customerSessionClientSecret: customerSession.client_secret,
         customer: customerId,
       };
 
