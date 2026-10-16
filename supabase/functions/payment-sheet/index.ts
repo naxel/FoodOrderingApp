@@ -6,6 +6,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts';
 import { withSupabase } from '@supabase/server';
 import { stripe } from '../_utils/stripe.ts';
+import { createOrRetrieveProfile } from '../_utils/supabase.ts';
 
 console.log('Hello from Functions!');
 
@@ -13,7 +14,7 @@ console.log('Hello from Functions!');
 // Use publishable for Client-facing, key-validated endpoints
 // Use secret for Server-to-server, internal calls
 export default {
-  fetch: withSupabase({ auth: ['publishable', 'secret'] }, async (req, ctx) => {
+  fetch: withSupabase({ auth: ['user'] }, async (req, ctx) => {
     try {
       // Called by another service with a secret key
       // ctx.supabaseAdmin bypasses RLS — use for privileged operations
@@ -27,16 +28,26 @@ export default {
         });
       }
       */
+      const customerId = await createOrRetrieveProfile(ctx);
+      // Create an ephermeralKey so that the Stripe SDK can fetch the customer's stored payment methods.
+      const ephemeralKey = await stripe.ephemeralKeys.create(
+        { customer: customerId },
+        { apiVersion: '2020-08-27' },
+      );
 
       const { amount } = await req.json();
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'USD',
+        customer: customerId,
       });
 
+      console.log(paymentIntent);
       const res = {
-        paymentIntent: paymentIntent.client_secret,
         publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
+        paymentIntent: paymentIntent.client_secret,
+        ephemeralKey: ephemeralKey.secret,
+        customer: customerId,
       };
 
       return new Response(JSON.stringify(res), {
