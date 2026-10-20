@@ -25,8 +25,10 @@ export const createOrRetrieveProfile = async (ctx) => {
     metadata: { uid: userClaims.id },
   });
   console.log(`New customer "${customer.id}" created for user "${profile.id}"`);
-
-  await supabase.from('profiles').update({ stripe_customer_id: customer.id }).eq('id', profile.id);
+  await supabaseAdmin
+    .from('profiles')
+    .update({ stripe_customer_id: customer.id })
+    .eq('id', profile.id);
 
   return customer.id;
 };
