@@ -5,23 +5,16 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
 const NotificationProvider = ({ children }: PropsWithChildren) => {
-  const [expoPushToken, setExpoPushToken] = useState('');
+  const [expoPushToken, setExpoPushToken] = useState<string>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>(
     undefined,
   );
   const { profile } = useAuth();
 
-  const savePushToken = async (newToken: string | undefined) => {
-    setExpoPushToken(newToken ?? '');
-    if (!newToken) {
-      return;
-    }
-    await supabase.from('profiles').update({ expo_push_token: newToken }).eq('id', profile.id);
-  };
-
   useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => savePushToken(token));
-    // .catch((error: any) => setExpoPushToken(`${error}`));
+    registerForPushNotificationsAsync()
+      .then(setExpoPushToken)
+      .catch((e) => console.warn('push registration failed', e));
 
     const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
       setNotification(notification);
@@ -36,6 +29,20 @@ const NotificationProvider = ({ children }: PropsWithChildren) => {
       responseListener.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!expoPushToken || !profile?.id) return;
+    if (profile.expo_push_token === expoPushToken) return; // зайвий write не потрібен
+
+    supabase
+      .from('profiles')
+      .update({ expo_push_token: expoPushToken })
+      .eq('id', profile.id)
+      .then(({ error }) => {
+        if (error) console.warn('save push token failed', error);
+      });
+  }, [expoPushToken, profile?.id]);
+
   return <>{children}</>;
 };
 

@@ -6,7 +6,7 @@ import { Profile } from '@/types';
 type AuthData = {
   session: Session | null;
   loading: boolean;
-  profile: any;
+  profile: Profile | null;
   isAdmin: boolean;
 };
 const AuthContext = createContext<AuthData>({
