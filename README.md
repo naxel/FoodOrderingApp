@@ -77,6 +77,73 @@ Use `-c` when the app shows stale code or config that a normal reload doesn't fi
 
 The first bundle after `-c` is slower; for everyday work plain `npx expo start` is enough.
 
+## Database migrations
+
+Schema changes (tables, columns, RLS policies, `GRANT`/`REVOKE`) live as SQL files in
+`supabase/migrations/`, applied in timestamp order. A change made only in Studio exists only
+in the local Docker database: it is not in git, never reaches the cloud, and disappears after
+`npx supabase db reset` (which rebuilds the local DB from the migration files). Always capture
+it in a migration.
+
+There are two ways to create one.
+
+### `npx supabase migration new <name>`
+
+Creates an empty file `supabase/migrations/<timestamp>_<name>.sql` that you fill with SQL by
+hand. Best when you know the SQL up front: the file stays short and shows the intent.
+
+```bash
+npx supabase migration new restrict_profile_updates
+# write SQL into supabase/migrations/<timestamp>_restrict_profile_updates.sql, then:
+npx supabase migration up
+```
+
+### `npx supabase migration up`
+
+Applies the local migrations that the local database hasn't run yet. Data is kept, unlike
+`db reset`. Run it after `migration new` (or after pulling someone else's migrations).
+
+### `npx supabase db diff -f <name>`
+
+Use it when you changed the schema in Studio first (Table Editor, Policies, SQL Editor). It
+spins up a temporary shadow database, applies all migrations to it, compares that with your
+local database, and writes the difference to `supabase/migrations/<timestamp>_<name>.sql`.
+The local DB already has the change, so there is nothing to apply afterwards.
+
+```bash
+npx supabase db diff --schema public            # preview only, no file written
+npx supabase db diff -f restrict_profile_updates
+```
+
+Review the generated file before committing:
+
+- it contains **everything** that differs between the DB and the migrations, including
+  accidental Studio edits;
+- it can be more verbose than hand-written SQL. For example, two lines of
+  `REVOKE UPDATE` / `GRANT UPDATE (cols)` come out as `REVOKE ALL` plus one grant per column.
+  The result is the same; you can replace the body with the shorter SQL.
+
+### Running SQL against the local database
+
+- **Studio SQL Editor**: http://127.0.0.1:54323/project/default/sql/new. Runs as `postgres`
+  (superuser), so it can change privileges. Table Editor and Policies can't: Policies covers
+  only RLS (which rows), not column privileges (which columns).
+- **Terminal, without installing `psql`**: run it inside the DB container:
+
+```bash
+docker exec supabase_db_FoodOrdering psql -U postgres -c "select 1"
+```
+
+Example: which `profiles` columns client roles may `UPDATE`:
+
+```sql
+select grantee, column_name
+from information_schema.column_privileges
+where table_schema = 'public' and table_name = 'profiles'
+  and privilege_type = 'UPDATE' and grantee in ('anon', 'authenticated')
+order by grantee, column_name;
+```
+
 ## Cloud Supabase project
 
 Replace `<project-ref>` below with your project's ref — the subdomain of
@@ -118,6 +185,35 @@ npx supabase secrets set STRIPE_SECRET_KEY=sk_... STRIPE_PUBLISHABLE_KEY=pk_...
 ```
 
 Redeploy after every change to the function or `_utils/`.
+
+`npx supabase functions deploy` with no name deploys every function in `supabase/functions/`.
+
+### `npx supabase db push`
+
+Applies to the **cloud database** the migrations from `supabase/migrations/` that it hasn't
+run yet (the cloud tracks applied ones in `supabase_migrations.schema_migrations`). Uses the
+project from `link`.
+
+Preview first, since nothing gets applied in this mode:
+
+```bash
+npx supabase db push --dry-run
+# Would push these migrations:
+#  • 20261020142057_restrict_profile_updates.sql
+npx supabase db push
+```
+
+**Deploy functions before pushing a migration they depend on.** If a migration removes a
+privilege that the live function still uses, the function breaks the moment the migration
+lands. Example: after `restrict_profile_updates`, only `supabaseAdmin` may write
+`stripe_customer_id`, so the fixed `payment-sheet` has to be deployed first:
+
+```bash
+npx supabase functions deploy payment-sheet
+npx supabase db push
+```
+
+After a push, regenerate types (below) if the schema changed.
 
 ### `npx supabase gen types typescript --project-id <project-ref> > src/database.types.ts`
 
