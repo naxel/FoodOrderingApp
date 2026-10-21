@@ -17,7 +17,16 @@ export const createOrRetrieveProfile = async (ctx) => {
   if (error || !profile) throw new Error('Profile not found');
 
   if (profile.stripe_customer_id) {
-    return profile.stripe_customer_id;
+    const existing = await stripe.customers.retrieve(profile.stripe_customer_id);
+    if (!existing.deleted) {
+      // Never trust the stored id alone: it must belong to this user
+      if (existing.metadata?.uid !== userClaims.id) {
+        console.error(`Stripe customer ${existing.id} does not belong to user ${userClaims.id}`);
+        throw new Error('Stripe customer mismatch');
+      }
+      return existing.id;
+    }
+    // Customer was deleted in Stripe — create a new one below
   }
 
   const customer = await stripe.customers.create({
