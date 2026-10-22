@@ -13,6 +13,7 @@ import { File } from 'expo-file-system';
 
 const CreateScreen = () => {
   const [image, setImage] = useState<string | null>(null);
+  const [imageType, setImageType] = useState('image/jpeg');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [errors, setErrors] = useState('');
@@ -73,6 +74,9 @@ const CreateScreen = () => {
     }
 
     const imagePath = await uploadImage();
+    if (imagePath === null) {
+      return;
+    }
     updateProduct(
       { id, name, price: parseFloat(price), image: imagePath },
       {
@@ -92,6 +96,9 @@ const CreateScreen = () => {
     }
 
     const imagePath = await uploadImage();
+    if (imagePath === null) {
+      return;
+    }
 
     insertProduct(
       { name, price: parseFloat(price), image: imagePath },
@@ -132,13 +139,14 @@ const CreateScreen = () => {
       mediaTypes: 'images' as MediaType,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      // < 1 makes the picker re-encode (JPEG) instead of returning the original, which can be
+      // a multi-MB HEIC/AVIF; the product-images bucket accepts up to 5 MB of png/jpeg/webp
+      quality: 0.7,
     });
-
-    console.log(result);
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
+      setImageType(result.assets[0].mimeType ?? 'image/jpeg');
     }
   };
   const uploadImage = async () => {
@@ -147,15 +155,19 @@ const CreateScreen = () => {
     }
 
     const arrayBuffer = await new File(image).arrayBuffer();
-    const filePath = `${randomUUID()}.png`;
-    const contentType = 'image/png';
+    // Real type of the picked file, so the bucket's MIME check means something
+    const contentType = imageType;
+    const filePath = `${randomUUID()}.${contentType.split('/')[1] ?? 'jpg'}`;
     const { data, error } = await supabase.storage
       .from('product-images')
       .upload(filePath, arrayBuffer, { contentType });
 
-    if (data) {
-      return data.path;
+    if (error || !data) {
+      // e.g. a Live Photo comes back as HEIC, or the file is over the bucket's 5 MB limit
+      Alert.alert('Image upload failed', error?.message ?? 'Please try another image');
+      return null;
     }
+    return data.path;
   };
 
   return (
