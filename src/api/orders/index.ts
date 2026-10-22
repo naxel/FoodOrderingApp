@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { Order, UpdateTables } from '@/types';
+import { Order, OrderStatus } from '@/types';
 import { functionErrorMessage } from '@/lib/stripe';
 
 export const useAdminOrderList = ({ archived = false }) => {
@@ -78,30 +78,22 @@ export const useCreateOrder = () => {
   });
 };
 
-export const useUpdateOrder = () => {
+// Admin only. The server saves the status and sends the owner a push notification
+export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      updatedFields,
-    }: {
-      id: number;
-      updatedFields: UpdateTables<'orders'>;
-    }) => {
-      const { error, data: updatedOrder } = await supabase
-        .from('orders')
-        .update(updatedFields)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) {
-        throw new Error(error.message);
+    mutationFn: async ({ id, status }: { id: number; status: OrderStatus }) => {
+      const { error, data } = await supabase.functions.invoke<{ order: Order; notified: boolean }>(
+        'update-order-status',
+        { body: { orderId: id, status } },
+      );
+      if (error || !data) {
+        throw new Error(await functionErrorMessage(error));
       }
-      return updatedOrder;
+      return data;
     },
-    onSuccess: async (_, { id }: any) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['orders'] });
-      await queryClient.invalidateQueries({ queryKey: ['orders', id] });
     },
   });
 };

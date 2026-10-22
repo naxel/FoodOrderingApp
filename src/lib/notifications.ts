@@ -1,8 +1,6 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { supabase } from '@/lib/supabase';
-import { Tables } from '@/types';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -12,30 +10,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-async function sendPushNotification(
-  expoPushToken: string,
-  title: string,
-  body: string,
-): Promise<void> {
-  const message = {
-    to: expoPushToken,
-    sound: 'default',
-    title,
-    body,
-    data: { someData: 'goes here' },
-  };
-
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Accept-encoding': 'gzip, deflate',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(message),
-  });
-}
 
 function handleRegistrationError(errorMessage: string) {
   alert(errorMessage);
@@ -79,19 +53,4 @@ export async function registerForPushNotificationsAsync() {
   }
 }
 
-const getUserToken = async (userId: string) => {
-  const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-  return data?.expo_push_token;
-};
-
-export const notifyUserAboutOrderUpdate = async (order: Tables<'orders'>) => {
-  if (!order?.user_id) {
-    return null;
-  }
-  const token = await getUserToken(order.user_id);
-  if (token && token !== '') {
-    const title = `Your order is ${order.status}`;
-    const body = 'It should there in soon';
-    await sendPushNotification(token, title, body);
-  }
-};
+// Push notifications about order status are sent by the update-order-status Edge Function

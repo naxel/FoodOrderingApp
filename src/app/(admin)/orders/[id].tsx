@@ -1,23 +1,29 @@
-import { FlatList, Text, View, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import {
+  FlatList,
+  Text,
+  View,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import OrderListItem from '@components/OrderListItem';
 import OrderItemListItem from '@components/OrderItemListItem';
 import { OrderStatus, OrderStatusList } from '@/types';
 import Colors from '@/constants/Colors';
-import { useOrderDetails, useUpdateOrder } from '@/api/orders';
-import { notifyUserAboutOrderUpdate } from '@/lib/notifications';
+import { useOrderDetails, useUpdateOrderStatus } from '@/api/orders';
 
 const OrderDetailScreen = () => {
   const { id: idString } = useLocalSearchParams();
   const id = parseFloat(typeof idString === 'string' ? idString : idString[0]);
   const { data: order, error, isLoading } = useOrderDetails(id);
-  const { mutateAsync: updateOrder } = useUpdateOrder();
+  const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus();
 
   const updateStatus = async (status: OrderStatus) => {
     try {
-      const updatedOrder = await updateOrder({ id, updatedFields: { status } });
-      // Notifying owner of order
-      await notifyUserAboutOrderUpdate(updatedOrder);
+      // The server also notifies the order's owner
+      await updateOrderStatus({ id, status });
     } catch (e: unknown) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update order');
     }

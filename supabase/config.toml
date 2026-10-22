@@ -438,3 +438,10 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/stripe-webhook/deno.json"
 entrypoint = "./functions/stripe-webhook/index.ts"
+
+[functions.update-order-status]
+enabled = true
+# JWT is verified by withSupabase({ auth: ['user'] }); admin is checked via is_admin()
+verify_jwt = false
+import_map = "./functions/update-order-status/deno.json"
+entrypoint = "./functions/update-order-status/index.ts"
