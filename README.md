@@ -108,12 +108,18 @@ Applies the local migrations that the local database hasn't run yet. Data is kep
 Use it when you changed the schema in Studio first (Table Editor, Policies, SQL Editor). It
 spins up a temporary shadow database, applies all migrations to it, compares that with your
 local database, and writes the difference to `supabase/migrations/<timestamp>_<name>.sql`.
-The local DB already has the change, so there is nothing to apply afterwards.
+The local DB already has the change, but `db diff -f` does **not** record the new file as
+applied. Mark it right away with `migration repair` (below), otherwise the next
+`migration up` tries to run it again and fails.
 
 ```bash
 npx supabase db diff --schema public            # preview only, no file written
 npx supabase db diff -f restrict_profile_updates
+npx supabase migration repair --local --status applied 20261020142057   # its timestamp
 ```
+
+`db diff` sees only schema (tables, policies, grants, functions). Rows such as bucket limits in
+`storage.buckets` are data, so write those migrations by hand with `migration new`.
 
 Review the generated file before committing:
 
@@ -122,6 +128,48 @@ Review the generated file before committing:
 - it can be more verbose than hand-written SQL. For example, two lines of
   `REVOKE UPDATE` / `GRANT UPDATE (cols)` come out as `REVOKE ALL` plus one grant per column.
   The result is the same; you can replace the body with the shorter SQL.
+
+### `npx supabase migration list --local`
+
+Shows which migration files the local database has recorded as applied. The CLI decides what
+to run from the table `supabase_migrations.schema_migrations`, not from the actual schema.
+Without `--local`, it compares local files with the linked cloud project.
+
+```bash
+npx supabase migration list --local
+# "local" = file in supabase/migrations/, "remote" = recorded in the local DB.
+# A version with an empty "remote" column will be run by the next `migration up`.
+```
+
+### `npx supabase migration repair --local --status applied <version...>`
+
+Edits only the migration history: it marks versions as applied (or `--status reverted` to
+unmark) **without running their SQL**. Use it when the change is already in the database
+(made in Studio, then captured with `db diff -f`) but the history doesn't know.
+
+Symptom: `migration up` fails on something that already exists, for example:
+
+```
+Applying migration 20261015101310_add_stripe_field.sql...
+ERROR: column "stripe_customer_id" of relation "profiles" already exists (SQLSTATE 42701)
+```
+
+Fix:
+
+```bash
+# 1. find versions missing from the history
+npx supabase migration list --local
+# 2. check in the DB that their changes really are there, then mark only those
+npx supabase migration repair --local --status applied 20261015101310 20261018101918
+# 3. run the rest
+npx supabase migration up
+```
+
+Never mark a migration whose changes are **not** in the database: it would be skipped forever
+locally. `--linked` does the same for the cloud project's history.
+
+`npx supabase db reset` also fixes the history (it rebuilds the local DB from all migrations),
+but it wipes local data: users, orders, storage objects.
 
 ### Running SQL against the local database
 
