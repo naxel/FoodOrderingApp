@@ -50,16 +50,40 @@ keeps running.
 
 ## Calling a function locally
 
-The local publishable key is printed by `npx supabase status`.
+`payment-sheet` and `create-order` use `withSupabase({ auth: ['user'] })`, so a request needs
+both the publishable key and a **signed-in user's JWT**. With the key alone you get
+`MISSING_CREDENTIALS`. The keys are printed by `npx supabase status`.
+
+Get a user JWT without knowing the password (local only: it uses the secret key):
+
+```bash
+# magic link for an existing user -> token_hash
+curl -s http://127.0.0.1:54321/auth/v1/admin/generate_link \
+  -H 'apikey: <SECRET_KEY>' -H 'Authorization: Bearer <SECRET_KEY>' \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"magiclink","email":"user@test.com"}'          # -> "hashed_token"
+
+# exchange it for a session -> access_token (the user JWT)
+curl -s http://127.0.0.1:54321/auth/v1/verify \
+  -H 'apikey: <PUBLISHABLE_KEY>' -H 'Content-Type: application/json' \
+  -d '{"type":"magiclink","token_hash":"<hashed_token>"}'   # -> "access_token"
+```
+
+Then call the function:
 
 ```bash
 curl -X POST http://127.0.0.1:54321/functions/v1/payment-sheet \
   -H 'apikey: <PUBLISHABLE_KEY>' \
+  -H 'Authorization: Bearer <access_token>' \
   -H 'Content-Type: application/json' \
-  -d '{"amount":1000}'
+  -d '{"items":[{"product_id":1,"size":"M","quantity":2}]}'
 ```
 
-From the app, `supabase.functions.invoke('payment-sheet', { body })` adds the key itself.
+The server prices the cart from `products`; an invalid cart returns `400 {"error": "..."}`, a
+server-side failure returns `500 {"error": "Payment setup failed"}` (details in the function logs).
+
+From the app, `supabase.functions.invoke('payment-sheet', { body })` adds the key and the
+user's JWT itself.
 
 ## Running the app
 
