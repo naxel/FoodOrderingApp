@@ -73,7 +73,7 @@ export const useCreateOrder = () => {
       return newOrder;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries(['orders']);
+      await queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 };
@@ -100,8 +100,8 @@ export const useUpdateOrder = () => {
       return updatedOrder;
     },
     onSuccess: async (_, { id }: any) => {
-      await queryClient.invalidateQueries(['orders']);
-      await queryClient.invalidateQueries(['orders', id]);
+      await queryClient.invalidateQueries({ queryKey: ['orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['orders', id] });
     },
   });
 };

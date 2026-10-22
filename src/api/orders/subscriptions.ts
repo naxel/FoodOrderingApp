@@ -8,11 +8,13 @@ export const useInsertOrderSubscription = () => {
     const ordersSubscription = supabase
       .channel('custom-insert-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
-        queryClient.invalidateQueries(['orders']);
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       })
       .subscribe();
     return () => {
-      ordersSubscription.unsubscribe();
+      // unsubscribe() keeps the channel in the client, and channel() with the same
+      // name would return it already subscribed; removeChannel drops it
+      supabase.removeChannel(ordersSubscription);
     };
   }, []);
 };
@@ -21,7 +23,7 @@ export const useUpdateOrderSubscription = (id: number) => {
   const queryClient = useQueryClient();
   useEffect(() => {
     const orders = supabase
-      .channel('custom-filter-channel')
+      .channel(`order-${id}`)
       .on(
         'postgres_changes',
         {
@@ -31,13 +33,13 @@ export const useUpdateOrderSubscription = (id: number) => {
           filter: `id=eq.${id}`,
         },
         () => {
-          queryClient.invalidateQueries(['orders', id]);
+          queryClient.invalidateQueries({ queryKey: ['orders', id] });
         },
       )
       .subscribe();
 
     return () => {
-      orders.unsubscribe();
+      supabase.removeChannel(orders);
     };
-  }, []);
+  }, [id]);
 };
