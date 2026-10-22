@@ -1,9 +1,9 @@
 import { createContext, PropsWithChildren, useContext, useState } from 'react';
-import { CartItem, Product, Tables } from '@/types';
+import { Alert } from 'react-native';
+import { CartItem, Product } from '@/types';
 import { randomUUID } from 'expo-crypto';
-import { useInsertOrder } from '@/api/orders';
+import { useCreateOrder } from '@/api/orders';
 import { useRouter } from 'expo-router';
-import { useInsertOrderItems } from '@/api/order-items';
 import { initialisePaymentSheet, openPaymentSheet } from '@/lib/stripe';
 
 type CartType = {
@@ -24,8 +24,7 @@ export const CartContext = createContext<CartType>({
 
 const CartProvider = ({ children }: PropsWithChildren) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const { mutate: insertOrder } = useInsertOrder();
-  const { mutate: insertOrderItems } = useInsertOrderItems();
+  const { mutate: createOrder } = useCreateOrder();
   const router = useRouter();
 
   const addItem = (product: Product, size: CartItem['size']) => {
@@ -60,32 +59,32 @@ const CartProvider = ({ children }: PropsWithChildren) => {
   };
 
   const checkout = async () => {
-    console.warn('Checkout');
-    await initialisePaymentSheet(Math.floor(total * 100));
-    const payload = await openPaymentSheet();
-    if (!payload) {
+    const paymentIntentId = await initialisePaymentSheet(
+      items.map(({ product_id, size, quantity }) => ({ product_id, size, quantity })),
+    );
+    if (!paymentIntentId) {
       return;
     }
-    insertOrder(
-      { total },
-      {
-        onSuccess: saveOrderItems,
-      },
-    );
+    const paid = await openPaymentSheet();
+    if (!paid) {
+      return;
+    }
+    saveOrder(paymentIntentId);
   };
 
-  const saveOrderItems = (order: Tables<'orders'>) => {
-    const orderItems = items.map((cartItem) => ({
-      order_id: order.id,
-      product_id: cartItem.product_id,
-      quantity: cartItem.quantity,
-      size: cartItem.size,
-    }));
-    insertOrderItems(orderItems, {
-      onSuccess: () => {
-        console.log(order);
+  const saveOrder = (paymentIntentId: string) => {
+    createOrder(paymentIntentId, {
+      onSuccess: (order) => {
         clearCard();
+        Alert.alert('Success', 'Your order is confirmed!');
         router.push(`/(user)/orders/${order.id}`);
+      },
+      onError: (error) => {
+        // Payment went through; create-order is safe to retry with the same PaymentIntent
+        Alert.alert('Payment received, but the order was not saved', error.message, [
+          { text: 'Retry', onPress: () => saveOrder(paymentIntentId) },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
       },
     });
   };

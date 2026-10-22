@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { InsertTables, Order, UpdateTables } from '@/types';
+import { Order, UpdateTables } from '@/types';
+import { functionErrorMessage } from '@/lib/stripe';
 
 export const useAdminOrderList = ({ archived = false }) => {
   const statuses = archived ? ['Delivered'] : ['New', 'Cooking', 'Delivering'];
@@ -58,19 +59,16 @@ export const useOrderDetails = (id: number) => {
   });
 };
 
-export const useInsertOrder = () => {
+// The order is created on the server from a paid PaymentIntent (create-order function)
+export const useCreateOrder = () => {
   const queryClient = useQueryClient();
-  const { session } = useAuth();
-  const userId = session?.user.id;
   return useMutation({
-    mutationFn: async (data: InsertTables<'orders'>) => {
-      const { error, data: newOrder } = await supabase
-        .from('orders')
-        .insert({ ...data, user_id: userId })
-        .select()
-        .single();
-      if (error) {
-        throw new Error(error.message);
+    mutationFn: async (paymentIntentId: string) => {
+      const { error, data: newOrder } = await supabase.functions.invoke<Order>('create-order', {
+        body: { paymentIntentId },
+      });
+      if (error || !newOrder) {
+        throw new Error(await functionErrorMessage(error));
       }
       return newOrder;
     },

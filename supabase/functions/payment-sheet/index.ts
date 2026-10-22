@@ -7,6 +7,7 @@ import '@supabase/functions-js/edge-runtime.d.ts';
 import { withSupabase } from '@supabase/server';
 import { stripe } from '../_utils/stripe.ts';
 import { createOrRetrieveProfile } from '../_utils/supabase.ts';
+import { CartError, encodeCart, parseCart, priceCart } from '../_utils/cart.ts';
 
 console.log('Hello from Functions!');
 
@@ -28,32 +29,41 @@ export default {
         });
       }
       */
+      // Validate the cart and price it from the DB before any Stripe call
+      const { items } = await req.json().catch(() => ({}));
+      const cart = parseCart(items);
+      const amount = await priceCart(ctx.supabase, cart);
+      if (!ctx.userClaims) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      const metadata = { uid: ctx.userClaims.id, cart: encodeCart(cart) };
+
       const customerId = await createOrRetrieveProfile(ctx);
-      const customerSession = await stripe.customerSessions.create({
-        customer: customerId,
-        components: {
-          mobile_payment_element: {
-            enabled: true,
-            features: {
-              payment_method_save: 'enabled',
-              payment_method_redisplay: 'enabled',
-              payment_method_remove: 'enabled',
+      const [customerSession, paymentIntent] = await Promise.all([
+        stripe.customerSessions.create({
+          customer: customerId,
+          components: {
+            mobile_payment_element: {
+              enabled: true,
+              features: {
+                payment_method_save: 'enabled',
+                payment_method_redisplay: 'enabled',
+                payment_method_remove: 'enabled',
+              },
             },
           },
-        },
-      });
+        }),
+        stripe.paymentIntents.create({
+          amount,
+          currency: 'usd',
+          customer: customerId,
+          metadata,
+        }),
+      ]);
 
-      const { amount } = await req.json();
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: 'USD',
-        customer: customerId,
-      });
-
-      console.log(paymentIntent);
+      console.log('PaymentIntent created', paymentIntent.id, amount);
       const res = {
         publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
         paymentIntent: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
         customerSessionClientSecret: customerSession.client_secret,
         customer: customerId,
       };
@@ -67,6 +77,9 @@ export default {
       //   message: `Hello ${name}!`,
       // });
     } catch (error) {
+      if (error instanceof CartError) {
+        return Response.json({ error: error.message }, { status: 400 });
+      }
       return new Response(JSON.stringify(error), {
         headers: { 'Content-Type': 'application/json' },
         status: 400,
