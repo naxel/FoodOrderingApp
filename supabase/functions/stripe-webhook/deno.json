@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@supabase/server": "npm:@supabase/server@^1",
+    "stripe": "npm:stripe@23.0.0"
+  }
+}

@@ -431,3 +431,10 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/create-order/deno.json"
 entrypoint = "./functions/create-order/index.ts"
+
+[functions.stripe-webhook]
+enabled = true
+# Called by Stripe without Supabase keys; the Stripe-Signature header is verified instead
+verify_jwt = false
+import_map = "./functions/stripe-webhook/deno.json"
+entrypoint = "./functions/stripe-webhook/index.ts"
