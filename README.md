@@ -85,6 +85,81 @@ server-side failure returns `500 {"error": "Payment setup failed"}` (details in 
 From the app, `supabase.functions.invoke('payment-sheet', { body })` adds the key and the
 user's JWT itself.
 
+## Edge Functions
+
+| Function              | Called by          | Auth                                 | What it does                                                                                                         |
+| --------------------- | ------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `payment-sheet`       | app, on checkout   | user JWT                             | validates the cart, prices it from `products`, creates the Stripe customer (once), CustomerSession and PaymentIntent |
+| `create-order`        | app, after payment | user JWT                             | checks the PaymentIntent in Stripe (succeeded, belongs to the user) and creates `orders` + `order_items`             |
+| `stripe-webhook`      | Stripe             | `Stripe-Signature` (no Supabase key) | on `payment_intent.succeeded` creates the same order, so it exists even if the app was closed right after paying     |
+| `update-order-status` | admin app          | user JWT + `is_admin()`              | changes the order status and sends the owner an Expo push notification                                               |
+
+Shared code lives in `supabase/functions/_utils/` (`cart.ts`, `orders.ts`, `stripe.ts`,
+`supabase.ts`); redeploy every function that imports a changed file.
+
+### How an order is created
+
+1. App → `payment-sheet` with `{ items: [{ product_id, size, quantity }] }`. The amount is
+   computed on the server; the user id and the cart go into the PaymentIntent `metadata`.
+2. The user pays in the Stripe Payment Sheet.
+3. App → `create-order` with `{ paymentIntentId }`, **and** Stripe → `stripe-webhook`. Whichever
+   comes first creates the order; `orders.payment_intent_id` is unique, so the other one gets the
+   same order back.
+
+Clients can't insert into `orders` / `order_items` or update `orders` (RLS); they only read
+their own orders (admins read all). Push tokens never leave the server.
+
+### Secrets
+
+| Name                     | Used by                               | Where it comes from                                                                       |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`      | all Stripe functions                  | Stripe Dashboard → API keys (`sk_test_...` in the sandbox)                                |
+| `STRIPE_PUBLISHABLE_KEY` | `payment-sheet` (returned to the app) | Stripe Dashboard → API keys (`pk_test_...`)                                               |
+| `STRIPE_WEBHOOK_SECRET`  | `stripe-webhook`                      | locally: `stripe listen --print-secret`; cloud: the endpoint's signing secret (see below) |
+| `EXPO_ACCESS_TOKEN`      | `update-order-status` (optional)      | needed only if "Enhanced security for push notifications" is on in the Expo project       |
+
+Locally they go into `supabase/functions/.env` (restart `npm run functions:serve` after a
+change); in the cloud, `npx supabase secrets set NAME=value`. A function that needs
+`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` fails on boot without it.
+
+### Stripe webhook locally: `stripe listen`
+
+Stripe can't reach `127.0.0.1`, so the Stripe CLI forwards events to the local function.
+
+```bash
+brew install stripe/stripe-cli/stripe
+stripe login                 # pick the SAME sandbox as STRIPE_SECRET_KEY in .env
+stripe config --list | grep account_id
+
+stripe listen --print-secret # -> whsec_..., put into supabase/functions/.env as STRIPE_WEBHOOK_SECRET
+npm run functions:serve      # restart so it reads the secret
+
+# keep this running while testing payments
+stripe listen --events payment_intent.succeeded \
+  --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook
+```
+
+Each forwarded event shows up as `payment_intent.succeeded [200]`.
+
+- **Wrong account.** If `stripe login` picked another account or sandbox, `listen` waits for
+  events that never come. Either log in again, or use the key from `.env` for one terminal:
+  `export STRIPE_API_KEY=$(grep -E '^STRIPE_SECRET_KEY=' supabase/functions/.env | cut -d= -f2-)`.
+- **Test event.** `stripe trigger payment_intent.succeeded` fails on newer API versions
+  (`payment_method_types ... no longer supported`). Use:
+
+  ```bash
+  stripe trigger payment_intent.succeeded \
+    --remove payment_intent:payment_method_types \
+    --add 'payment_intent:automatic_payment_methods[enabled]=true' \
+    --add 'payment_intent:automatic_payment_methods[allow_redirects]=never'
+  ```
+
+  It has no cart in `metadata`, so the webhook answers `200 {"ignored":"no cart metadata"}`.
+
+- **One sandbox for local and cloud.** Every test payment is sent to the cloud endpoint and to
+  `stripe listen`. The database that doesn't know the user answers
+  `200 {"ignored":"unknown user"}`, so Stripe doesn't retry.
+
 ## Running the app
 
 ### `npx expo start -c`
@@ -245,20 +320,69 @@ What it does:
   import map `payment-sheet/deno.json`, using the settings from `[functions.payment-sheet]` in
   `supabase/config.toml` (e.g. `verify_jwt = false`);
 - publishes it at `https://<project-ref>.supabase.co/functions/v1/payment-sheet`. The
-  app calls it via `supabase.functions.invoke('payment-sheet', { body })`; the function creates
-  a Stripe Customer (or reuses the saved one), a CustomerSession and a PaymentIntent and
-  returns the secrets the Payment Sheet needs.
+  app calls it via `supabase.functions.invoke('payment-sheet', { body })`; the function prices
+  the cart, creates a Stripe Customer (or reuses the saved one), a CustomerSession and a
+  PaymentIntent and returns the secrets the Payment Sheet needs.
 
 Before the first deploy, run `link` (above) and set the secrets in the cloud —
-`supabase/functions/.env` is used only locally:
+`supabase/functions/.env` is used only locally (full list in [Secrets](#secrets)):
 
 ```bash
 npx supabase secrets set STRIPE_SECRET_KEY=sk_... STRIPE_PUBLISHABLE_KEY=pk_...
 ```
 
-Redeploy after every change to the function or `_utils/`.
+Redeploy after every change to the function or `_utils/`. The other functions deploy the same
+way, several at once:
+
+```bash
+npx supabase functions deploy payment-sheet create-order stripe-webhook update-order-status
+```
 
 `npx supabase functions deploy` with no name deploys every function in `supabase/functions/`.
+
+### Stripe webhook endpoint (cloud)
+
+Once per Stripe environment (sandbox and live each need their own):
+
+1. Stripe Dashboard → **Workbench → Webhooks** →
+   **Add destination** (direct link: `https://dashboard.stripe.com/<account-id>/test/workbench/webhooks`).
+2. Events from **Your account**, payload style **Snapshot** (the function reads the full
+   PaymentIntent from the event; **Thin** events won't work), API version = the one of the
+   `stripe` SDK in `deno.json`, event `payment_intent.succeeded`.
+3. Destination type **Webhook endpoint**, URL
+   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook`.
+4. Copy the destination's **Signing secret**. It's not the one from `stripe listen`.
+5. Set the secret **before** deploying, since the function fails on boot without it:
+
+   ```bash
+   npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+   npx supabase functions deploy stripe-webhook
+   ```
+
+6. **Send test events** → `payment_intent.succeeded` → expect
+   `200 {"received":true,"ignored":"no cart metadata"}`. Real deliveries are listed under
+   **Event deliveries**; a non-2xx response is retried by Stripe for up to 3 days.
+
+### Deploy order
+
+When a migration takes away something the **running** code still uses, deploy the code first:
+
+1. `npx supabase secrets set ...` for any new secret;
+2. `npx supabase functions deploy <changed functions>`;
+3. release the app version that uses them (old builds may stop working at step 4);
+4. `npx supabase db push`.
+
+Examples from this project:
+
+- `orders_server_side_insert_only` removes client inserts into `orders`. Deploy `payment-sheet`
+  and `create-order` first, otherwise users pay but no order is saved.
+- `orders_status_via_function` removes the admin's direct `UPDATE` on `orders` and access to
+  other profiles. Deploy `update-order-status` first, otherwise the admin can't change statuses.
+- `restrict_profile_updates` removes the client's right to write `stripe_customer_id`. Deploy the
+  `payment-sheet` that writes it with `supabaseAdmin` first.
+
+When a migration only **adds** something (a column, a table), push it before the code that
+uses it.
 
 ### `npx supabase db push`
 
@@ -275,15 +399,8 @@ npx supabase db push --dry-run
 npx supabase db push
 ```
 
-**Deploy functions before pushing a migration they depend on.** If a migration removes a
-privilege that the live function still uses, the function breaks the moment the migration
-lands. Example: after `restrict_profile_updates`, only `supabaseAdmin` may write
-`stripe_customer_id`, so the fixed `payment-sheet` has to be deployed first:
-
-```bash
-npx supabase functions deploy payment-sheet
-npx supabase db push
-```
+If a pending migration takes away something the running code uses, deploy the code first. See
+[Deploy order](#deploy-order).
 
 After a push, regenerate types (below) if the schema changed.
 
