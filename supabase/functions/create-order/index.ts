@@ -17,8 +17,14 @@ export default {
         return Response.json({ error: 'paymentIntentId is required' }, { status: 400 });
       }
 
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (paymentIntent.metadata.uid !== userClaims.id) {
+      const paymentIntent = await stripe.paymentIntents
+        .retrieve(paymentIntentId)
+        // An unknown id answers like someone else's payment, so ids can't be probed
+        .catch((error) => {
+          if (error?.code === 'resource_missing') return null;
+          throw error;
+        });
+      if (!paymentIntent || paymentIntent.metadata.uid !== userClaims.id) {
         return Response.json({ error: 'Payment not found' }, { status: 404 });
       }
       if (paymentIntent.status !== 'succeeded') {
@@ -28,10 +34,7 @@ export default {
       return Response.json(await createOrderFromPaymentIntent(supabaseAdmin, paymentIntent));
     } catch (error) {
       console.error('create-order failed', error);
-      return Response.json(
-        { error: (error as { message?: string })?.message ?? 'Unknown error' },
-        { status: 500 },
-      );
+      return Response.json({ error: 'Failed to create order' }, { status: 500 });
     }
   }),
 };
