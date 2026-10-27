@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. If port 3000 is taken, Next.js picks the next free one (3001, 3002, ...) and prints it in the terminal.
 
 `admin/.env.local`:
 
@@ -77,3 +77,7 @@ shadcn 4 generates `lib/utils.ts` as `export { cn } from "cn"`. `cn` is shadcn's
 ### No `src/` directory
 
 `app/`, `components/` and `lib/` sit at the top of `admin/`, which is what shadcn and the course expect. The `@/*` alias points at `admin/`.
+
+## Next step
+
+Session 3: admin-only access with `is_admin()` (course 3:44).
