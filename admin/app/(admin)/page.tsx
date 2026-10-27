@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
-import { signOut } from './(auth)/actions';
+import { signOut } from '@/app/(auth)/actions';
 
 export default async function Home() {
   const supabase = await createClient();

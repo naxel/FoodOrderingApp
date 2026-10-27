@@ -78,6 +78,12 @@ shadcn 4 generates `lib/utils.ts` as `export { cn } from "cn"`. `cn` is shadcn's
 
 `app/`, `components/` and `lib/` sit at the top of `admin/`, which is what shadcn and the course expect. The `@/*` alias points at `admin/`.
 
+### 403 with `forbidden()`, not a redirect
+
+`app/(admin)/layout.tsx` checks `rpc('is_admin')` and calls `forbidden()` for non-admins, which renders `app/forbidden.tsx` (with a Log Out button, since the proxy keeps a signed-in user away from `/login`). `forbidden()` is still experimental and needs `experimental.authInterrupts` in `next.config.ts`.
+
+The check runs inside `<Suspense>` because `cacheComponents` is on and reading cookies outside a Suspense boundary blocks the route. The response is already streaming when `forbidden()` runs, so the HTTP status stays 200 while the page shows 403. The layout is not a security boundary either: Server Actions and Route Handlers are called directly, so data stays protected by RLS.
+
 ## Next step
 
-Session 3: admin-only access with `is_admin()` (course 3:44).
+Session 4: layout, sidebar, theme (course 3:57).
