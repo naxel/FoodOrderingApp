@@ -84,6 +84,14 @@ shadcn 4 generates `lib/utils.ts` as `export { cn } from "cn"`. `cn` is shadcn's
 
 The check runs inside `<Suspense>` because `cacheComponents` is on and reading cookies outside a Suspense boundary blocks the route. The response is already streaming when `forbidden()` runs, so the HTTP status stays 200 while the page shows 403. The layout is not a security boundary either: Server Actions and Route Handlers are called directly, so data stays protected by RLS.
 
+### Layout: shadcn Sidebar, `next-themes`, one `getClaims` per request
+
+The `(admin)` layout renders the shadcn `Sidebar` (collapses to icons, a sheet on mobile that closes on navigation), a header with the user's email, theme toggle and Log Out. Dark mode follows the shadcn guide: `next-themes` with `attribute="class"` and `suppressHydrationWarning` on `<html>`. `lib/auth.ts` wraps `getClaims()` in React `cache()`, so the layout and pages share one result per request.
+
+`hooks/use-mobile.ts` is rewritten with `useSyncExternalStore`: the generated version calls `setState` inside an effect, which `react-hooks/set-state-in-effect` rejects. Re-running `shadcn add sidebar` overwrites it, so redo the change after that.
+
+`--font-sans` in `app/globals.css` points at `--font-geist-sans`, the variable `next/font` sets in `app/layout.tsx`. The shadcn preset generated a self-reference, which made the browser fall back to a serif font.
+
 ## Next step
 
-Session 4: layout, sidebar, theme (course 3:57).
+Session 5: products list with `next/image` (course 4:13).
