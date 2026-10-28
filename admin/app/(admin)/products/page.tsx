@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, MoreHorizontalIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import {
   Table,
@@ -10,6 +10,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -30,7 +39,8 @@ export default async function Products() {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Image</TableHead>
-            <TableHead className="text-right">Price</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -55,11 +65,31 @@ export default async function Products() {
                   </div>
                 )}
               </TableCell>
-              <TableCell className="text-right">{price.format(product.price)}</TableCell>
+              <TableCell>{price.format(product.price)}</TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="size-8">
+                      <MoreHorizontalIcon />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/products/${product.id}`}>Edit</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <Button asChild>
+        <Link href="/products/new">New product</Link>
+      </Button>
     </>
   );
 }
