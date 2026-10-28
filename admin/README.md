@@ -92,6 +92,16 @@ The `(admin)` layout renders the shadcn `Sidebar` (collapses to icons, a sheet o
 
 `--font-sans` in `app/globals.css` points at `--font-geist-sans`, the variable `next/font` sets in `app/layout.tsx`. The shadcn preset generated a self-reference, which made the browser fall back to a serif font.
 
+### Products list: public Storage URLs through `next/image`
+
+`products.image` holds a path in the public `product-images` bucket, so the page builds the URL with `getPublicUrl()` (no network call) instead of downloading the file like the mobile app does. `next.config.ts` allows that path in `images.remotePatterns`, built from `NEXT_PUBLIC_SUPABASE_URL` so the cloud host works after deploy. Next.js 16 refuses to optimize images from private IPs (SSRF protection), and local Supabase is on `127.0.0.1`, so `dangerouslyAllowLocalIP` is on in development only. Optimized images are cached in `.next`, so the check fires only on a cache miss.
+
+Queries use `.throwOnError()`. Without it supabase-js returns a plain object typed as `PostgrestError`, and throwing that shows `{code: …, message: …}` in `error.tsx` instead of the message.
+
+### `connection()` in the server Supabase client
+
+With `cacheComponents` and `partialPrefetching`, Next.js prerenders an App Shell that may read cookies but not `Date.now()`. `createServerClient` reads the clock while it loads the session, so `lib/supabase/server.ts` calls `await connection()` first: everything that talks to Supabase renders at request time, and the shell keeps the sidebar and `loading.tsx`.
+
 ## Next step
 
-Session 5: products list with `next/image` (course 4:13).
+Session 6: products CRUD with react-hook-form, Server Actions and Storage upload (course 5:24).
