@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ImageOff, MoreHorizontalIcon } from 'lucide-react';
+import { ImageOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import {
   Table,
@@ -12,13 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { ProductRowActions } from '@/components/product-row-actions';
 
 const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -27,6 +21,7 @@ export default async function Products() {
   const { data: products } = await supabase
     .from('products')
     .select('id, name, image, price')
+    .is('archived_at', null)
     .order('id')
     .throwOnError();
 
@@ -67,21 +62,7 @@ export default async function Products() {
               </TableCell>
               <TableCell>{price.format(product.price)}</TableCell>
               <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8">
-                      <MoreHorizontalIcon />
-                      <span className="sr-only">Open menu</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/products/${product.id}`}>Edit</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ProductRowActions product={product} />
               </TableCell>
             </TableRow>
           ))}

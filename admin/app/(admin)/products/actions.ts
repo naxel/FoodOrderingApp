@@ -33,3 +33,17 @@ export async function updateProduct(productId: number, values: ProductInput) {
   revalidatePath('/products');
   redirect('/products');
 }
+
+export async function archiveProduct(productId: number) {
+  if (!Number.isInteger(productId)) return { error: 'Product not found or access denied' };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('products')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', productId)
+    .select('id');
+  if (error) return { error: error.message };
+  if (!data.length) return { error: 'Product not found or access denied' };
+
+  revalidatePath('/products');
+}

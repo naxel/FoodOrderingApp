@@ -5,7 +5,7 @@ export const useProductList = () => {
   return useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*');
+      const { data, error } = await supabase.from('products').select('*').is('archived_at', null);
       if (error) {
         throw new Error(error.message);
       }
@@ -80,12 +80,15 @@ export const useDeleteProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase
+        .from('products')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id);
       if (error) {
         throw new Error(error.message);
       }
     },
-    onSuccess: async (_, id: number) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });

@@ -32,7 +32,11 @@ export const parseCart = (items: unknown): CartLine[] => {
 // deno-lint-ignore no-explicit-any
 export const priceCart = async (supabase: { from: (table: string) => any }, cart: CartLine[]) => {
   const ids = [...new Set(cart.map((line) => line.product_id))];
-  const { data, error } = await supabase.from('products').select('id, price').in('id', ids);
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, price')
+    .in('id', ids)
+    .is('archived_at', null);
   if (error) throw error;
 
   const products = data as { id: number; price: number }[];

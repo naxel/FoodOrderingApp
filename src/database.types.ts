@@ -104,6 +104,7 @@ export type Database = {
       };
       products: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           id: number;
           image: string | null;
@@ -112,6 +113,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          archived_at?: string | null;
           created_at?: string;
           id?: number;
           image?: string | null;
@@ -119,6 +121,7 @@ export type Database = {
           price: number;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           id?: number;
           image?: string | null;

@@ -27,7 +27,11 @@ Database types, from the repo root:
 
 ```bash
 npx supabase gen types typescript --local > admin/lib/database.types.ts
+npx supabase gen types typescript --local > src/database.types.ts
+npx prettier --write admin/lib/database.types.ts src/database.types.ts
 ```
+
+`gen types` writes unformatted output, so run Prettier after it or `prettier --check` fails.
 
 ## Decisions
 
@@ -37,9 +41,9 @@ The Expo app already has an admin section on mobile. The web admin is a separate
 
 The root `tsconfig.json`, `eslint.config.js` and `.prettierignore` exclude `admin/` so the Expo tooling does not check Next.js files.
 
-### The database is not changed for the admin
+### The admin reuses the mobile app's database rules
 
-The admin uses the schema, RLS policies and Edge Functions that already protect the mobile app:
+The admin uses the schema, RLS policies and Edge Functions that already protect the mobile app. The only schema change made for it so far is product archiving (below).
 
 - Admin access is checked on the server with `rpc('is_admin')` (`profiles.group = 'ADMIN'`). The route guard in `proxy.ts` only redirects; the security boundary is RLS.
 - Order status is changed by calling the `update-order-status` Edge Function with the admin's session, not by updating `orders` directly. There is no UPDATE policy on `orders`, and the function also sends the push notification to the customer.
@@ -110,6 +114,22 @@ With Cache Components, Next.js hides visited pages with React `<Activity>` inste
 
 RLS rejects a forbidden `insert` with an error, but a forbidden `update` or `delete` just matches zero rows and succeeds. `updateProduct` asks for the row back with `.select('id')` and treats an empty result as "not found or access denied".
 
+### Products are archived, not deleted
+
+`order_items.product_id` was `ON DELETE CASCADE`, so deleting a product silently removed it from every past order. Migration `20261029104023_products_soft_delete.sql`:
+
+- adds `products.archived_at`; "Delete" in both apps sets it instead of deleting the row;
+- changes the foreign key to `ON DELETE RESTRICT`, so a hard delete of a product with orders fails with `23503` instead of rewriting order history;
+- adds a Storage DELETE policy for admins on `product-images` (without one, `remove()` matches nothing and returns an empty list), needed to replace a product photo.
+
+RLS on `products` SELECT is unchanged: order history still shows archived products by id. The menu queries (admin list, mobile list) filter `archived_at is null`, and `priceCart` in the Edge Functions does too, so a cart that still holds an archived product is rejected with `Unknown product` before payment.
+
+The archive action follows `updateProduct`: `.select('id')` and an empty result means "not found or access denied".
+
+### Row actions: one client component for the menu and the dialog
+
+`components/product-row-actions.tsx` renders the row's `DropdownMenu` and the confirm `AlertDialog` side by side, and the page passes it `{ id, name }`. A dialog inside `DropdownMenuContent` unmounts when the menu closes on select, so the menu item only sets `open`, and the dialog has no `Trigger`. Because of that, Radix never reports `onOpenChange(true)`, so the error message is reset in the item's `onSelect`. "Continue" calls `preventDefault()` to keep the dialog open while the action runs in `useTransition`; the dialog cannot be closed while it is pending. The open state is reset in a `useLayoutEffect` cleanup for the same `<Activity>` reason as the form.
+
 ## Next step
 
-Session 6b: product image upload to Storage and product delete (course 5:24-6:40).
+Session 6b-2: product image upload to Storage through a Server Action, replacing the old file (course 5:24-6:40).
