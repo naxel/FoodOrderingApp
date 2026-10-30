@@ -130,6 +130,20 @@ The archive action follows `updateProduct`: `.select('id')` and an empty result 
 
 `components/product-row-actions.tsx` renders the row's `DropdownMenu` and the confirm `AlertDialog` side by side, and the page passes it `{ id, name }`. A dialog inside `DropdownMenuContent` unmounts when the menu closes on select, so the menu item only sets `open`, and the dialog has no `Trigger`. Because of that, Radix never reports `onOpenChange(true)`, so the error message is reset in the item's `onSelect`. "Continue" calls `preventDefault()` to keep the dialog open while the action runs in `useTransition`; the dialog cannot be closed while it is pending. The open state is reset in a `useLayoutEffect` cleanup for the same `<Activity>` reason as the form.
 
+### Product photos: uploaded by the Server Action, 4 MB cap
+
+The form sends a `FormData` (name, price, optional file) to the action. `FormData` is a documented Server Function argument type and carries the file as binary multipart; the form builds it from the values react-hook-form already validated, not from the DOM.
+
+- `lib/schemas/product.ts` validates the file with zod's `z.file()` (PNG, JPEG or WebP, at most 4 MB), so the client and the action share one rule. The bucket checks type and size again.
+- The cap is 4 MB, not the bucket's 5 MB, because a Vercel Function accepts a request body of at most 4.5 MB. `experimental.serverActions.bodySizeLimit` is `'4.5mb'` (the default is 1 MB, and the limit counts the multipart overhead too).
+- Files are stored as `<uuid>.<ext>`, with the extension taken from the MIME type, never from the file name. A new photo always gets a new path, so no Storage UPDATE policy is needed and no CDN cache can serve the old picture.
+- `updateProduct` reads the old path first, uploads the new file, updates the row, and only after a successful update removes the old file. If the insert or update fails, the file it just uploaded is removed. A failed cleanup only logs: the worst case is an orphaned file, never a product pointing at a missing one.
+- The type check trusts the `Content-Type` the browser sends; file contents are not inspected. Only admins can upload (Storage INSERT policy), so this is accepted.
+
+The alternative was uploading from the browser straight to Storage, as the mobile app does. That avoids the body limit, but it splits validation between client and bucket and leaves orphaned files when the form is abandoned after the upload.
+
+In the form, the file input is uncontrolled. `form.reset()` does not clear it: `Controller` passes a proxy object as the field ref, so react-hook-form's native `<form>.reset()` path never runs. The form clears the input through its own ref in the same `useLayoutEffect` cleanup. The preview URL is created in the `onChange` handler and revoked in an effect cleanup.
+
 ## Next step
 
-Session 6b-2: product image upload to Storage through a Server Action, replacing the old file (course 5:24-6:40).
+Session 7: orders list with `order_items(*, products(*))`, status filter in `searchParams`, and the `/orders/[id]` page (course 7:52-8:21).

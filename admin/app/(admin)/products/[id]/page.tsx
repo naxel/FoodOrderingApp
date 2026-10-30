@@ -11,7 +11,7 @@ export default async function EditProduct({ params }: PageProps<'/products/[id]'
   const supabase = await createClient();
   const { data: product } = await supabase
     .from('products')
-    .select('name, price')
+    .select('name, price, image')
     .eq('id', productId)
     .maybeSingle()
     .throwOnError();
@@ -20,10 +20,19 @@ export default async function EditProduct({ params }: PageProps<'/products/[id]'
     notFound();
   }
 
+  let imageUrl;
+  if (product.image) {
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('product-images').getPublicUrl(product.image);
+    imageUrl = publicUrl;
+  }
+
   return (
     <ProductForm
       submitLabel="Update"
-      defaultValues={product}
+      defaultValues={{ name: product.name, price: product.price }}
+      imageUrl={imageUrl}
       onSave={updateProduct.bind(null, productId)}
     />
   );
