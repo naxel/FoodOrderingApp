@@ -144,6 +144,26 @@ The alternative was uploading from the browser straight to Storage, as the mobil
 
 In the form, the file input is uncontrolled. `form.reset()` does not clear it: `Controller` passes a proxy object as the field ref, so react-hook-form's native `<form>.reset()` path never runs. The form clears the input through its own ref in the same `useLayoutEffect` cleanup. The preview URL is created in the `onChange` handler and revoked in an effect cleanup.
 
+### Pages: a sync page and an async child under `<Suspense>`
+
+`(admin)/loading.tsx` covers the first load, but not client navigation inside the mounted `(admin)` layout, and Next.js warns that such a navigation is not instant. So every data page is a synchronous component that renders the heading (and static links) and passes `params` / `searchParams` unawaited to an async child inside `<Suspense fallback={<ListSkeleton />}>`. The child awaits them, queries Supabase and renders the data. The child's props are typed as `PageProps<'/orders/[id]'>['params']`.
+
+`notFound()` called inside that boundary renders the 404 page, but the HTTP status stays 200, for the same streaming reason as `forbidden()`.
+
+### Orders list: the status filter is a link, not client state
+
+`/orders?status=Cooking` filters on the server. The filter buttons are `<Link>`s styled as buttons (`aria-current` on the active one), so the page stays a Server Component, a filtered list has its own URL, and Back works.
+
+`orders.status` is a `text` column with no CHECK constraint, so the value from the URL and the value from the row are both checked with `isOrderStatus()` from `lib/orders.ts`. An unknown `?status=` shows all orders instead of an empty list, and `OrderStatusBadge` renders an unknown row status as plain text instead of crashing on the badge variant lookup.
+
+Dates are formatted with `timeZone: 'Europe/Kyiv'` in `lib/format.ts`. Without it, the server's time zone is used, which is UTC on Vercel.
+
+### Order page: line prices are current prices
+
+`/orders/[id]` loads the order with `order_items(..., products(...))` in one query. `order_items` has no price column, so the line prices are today's product prices, and the page says so. The total is `orders.total`, which the Edge Functions take from the Stripe PaymentIntent's `amount_received` when they create the order. Today these match because no price has changed since; once one does, the lines and the total will differ.
+
+`order_items.product_id` is not nullable, and products are archived rather than deleted, so `products` is always present and an archived product still shows in its old orders.
+
 ## Next step
 
-Session 7: orders list with `order_items(*, products(*))`, status filter in `searchParams`, and the `/orders/[id]` page (course 7:52-8:21).
+Session 8: change the order status through the `update-order-status` Edge Function from the order page, and refresh the orders list with Supabase Realtime.

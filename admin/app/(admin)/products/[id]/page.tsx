@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { updateProduct } from '@/app/(admin)/products/actions';
 import { Suspense } from 'react';
 import { ListSkeleton } from '@/components/list-skeleton';
+import { productImageUrl } from '@/lib/storage';
 
 type Params = PageProps<'/products/[id]'>['params'];
 
@@ -26,10 +27,7 @@ async function EditProductForm({ params }: { params: Params }) {
 
   let imageUrl;
   if (product.image) {
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('product-images').getPublicUrl(product.image);
-    imageUrl = publicUrl;
+    imageUrl = productImageUrl(supabase, product.image);
   }
 
   return (

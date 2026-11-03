@@ -15,8 +15,8 @@ import Link from 'next/link';
 import { ProductRowActions } from '@/components/product-row-actions';
 import { ListSkeleton } from '@/components/list-skeleton';
 import { Suspense } from 'react';
-
-const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+import { priceFormat } from '@/lib/format';
+import { productImageUrl } from '@/lib/storage';
 
 async function ProductsTable() {
   const supabase = await createClient();
@@ -45,10 +45,7 @@ async function ProductsTable() {
             <TableCell>
               {product.image ? (
                 <Image
-                  src={
-                    supabase.storage.from('product-images').getPublicUrl(product.image).data
-                      .publicUrl
-                  }
+                  src={productImageUrl(supabase, product.image)}
                   alt={product.name}
                   width={48}
                   height={48}
@@ -60,7 +57,7 @@ async function ProductsTable() {
                 </div>
               )}
             </TableCell>
-            <TableCell>{price.format(product.price)}</TableCell>
+            <TableCell>{priceFormat.format(product.price)}</TableCell>
             <TableCell className="text-right">
               <ProductRowActions product={product} />
             </TableCell>
