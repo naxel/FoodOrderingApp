@@ -18,6 +18,9 @@ import Image from 'next/image';
 import { productImageUrl } from '@/lib/storage';
 import { ArrowLeft, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { OrderStatusSelect } from '@/components/order-status-select';
+import { isOrderStatus } from '@/lib/orders';
+import { OrdersRealtime } from '@/components/orders-realtime';
 
 type Params = PageProps<'/orders/[id]'>['params'];
 
@@ -48,7 +51,11 @@ async function OrderDetails({ params }: { params: Params }) {
         <dd>{dateFormat.format(new Date(order.created_at))}</dd>
         <dt className="text-muted-foreground">Status</dt>
         <dd>
-          <OrderStatusBadge status={order.status} />
+          {isOrderStatus(order.status) ? (
+            <OrderStatusSelect orderId={order.id} status={order.status} />
+          ) : (
+            <OrderStatusBadge status={order.status} />
+          )}
         </dd>
         <dt className="text-muted-foreground">Client</dt>
         <dd>{order.user_id?.slice(0, 8) ?? '-'}</dd>
@@ -105,6 +112,7 @@ async function OrderDetails({ params }: { params: Params }) {
       <p className="text-sm text-muted-foreground">
         Line prices are current product prices; the total is what was charged.
       </p>
+      <OrdersRealtime filter={`id=eq.${order.id}`} />
     </>
   );
 }

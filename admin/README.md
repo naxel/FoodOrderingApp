@@ -164,6 +164,26 @@ Dates are formatted with `timeZone: 'Europe/Kyiv'` in `lib/format.ts`. Without i
 
 `order_items.product_id` is not nullable, and products are archived rather than deleted, so `products` is always present and an archived product still shows in its old orders.
 
+### Order status: a Server Action that calls the Edge Function
+
+The status `Select` on `/orders/[id]` calls the `updateOrderStatus` Server Action, which calls `update-order-status` with `functions.invoke`. The server Supabase client reads the session from cookies, so the function receives the admin's JWT and checks `is_admin` itself. The action validates the id and the status first anyway, because a Server Action is a public POST endpoint and its TypeScript parameter types are not checked at runtime.
+
+- A non-2xx response from a function comes back as `FunctionsHttpError`, not as a thrown error. `lib/functions.ts` reads the function's own `{ error }` text from `error.context.json()`; the mobile app has the same helper.
+- The action returns `{ error }` instead of throwing. In production Next.js replaces the message of an error thrown from a Server Action with a generic one, so "Forbidden" or "Order not found" would not reach the page.
+- After success the action calls `refresh()` from `next/cache` (new in Next.js 16), which re-renders the current route on the client. `revalidatePath` is not needed because nothing is cached: every Supabase query runs at request time.
+- The `Select` is controlled by `useOptimistic(status)`. It shows the new status while the action runs; if the action fails, the transition ends and React shows the server's status again without any manual rollback. On success the response says whether the customer was notified or has no push token.
+- An order whose status is not one of the four known values shows the plain badge instead of the `Select`.
+
+### Realtime: `router.refresh()` on every change to `orders`
+
+`components/orders-realtime.tsx` is a client component that renders nothing. It subscribes to `postgres_changes` on `orders` (the table is already in the `supabase_realtime` publication) and calls `router.refresh()`, so the Server Components re-render with fresh data. The list listens to every order; the order page passes `filter: id=eq.<id>`.
+
+- Realtime checks the SELECT policy of each subscriber before sending an event, using the JWT of the browser client's session. Admins can read every order, so they get every event; a customer would only get their own. The subscription needs no filter for security.
+- With Cache Components a hidden page is kept in `<Activity>`, which runs effect cleanups. The hidden page unsubscribes (`removeChannel`) and subscribes again when shown.
+- Each page uses its own channel name. The browser client is a singleton, and `channel(name)` returns an existing channel with that name if the previous page's `removeChannel` (async) has not finished yet.
+- A new order is inserted before its `order_items`, in a separate statement with no transaction, so an `INSERT` event can arrive before the items exist. The list does not show items, so it is not affected.
+- A status change made in the admin refreshes twice: once from the action, once from the Realtime event. That is harmless.
+
 ## Next step
 
-Session 8: change the order status through the `update-order-status` Edge Function from the order page, and refresh the orders list with Supabase Realtime.
+Session 9: dashboard with orders per day, revenue and top products, aggregated on the server.

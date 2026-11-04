@@ -15,6 +15,7 @@ import {
 import { dateFormat, priceFormat } from '@/lib/format';
 import { isOrderStatus, ORDER_STATUSES } from '@/lib/orders';
 import { OrderStatusBadge } from '@/components/order-status-badge';
+import { OrdersRealtime } from '@/components/orders-realtime';
 
 type Params = PageProps<'/orders'>['searchParams'];
 
@@ -96,6 +97,7 @@ export default function Orders({ searchParams }: PageProps<'/orders'>) {
       <Suspense fallback={<ListSkeleton />}>
         <OrdersTable searchParams={searchParams} />
       </Suspense>
+      <OrdersRealtime />
     </>
   );
 }
