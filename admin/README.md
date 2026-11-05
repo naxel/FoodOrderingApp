@@ -1,6 +1,6 @@
 # FoodOrdering Admin
 
-Web admin panel for the FoodOrdering app: products, orders and order status, on top of the same Supabase project as the Expo app (same tables, RLS policies and Edge Functions).
+Web admin panel for the FoodOrdering app: products, orders, order status and a sales dashboard, on top of the same Supabase project as the Expo app (same tables, RLS policies and Edge Functions).
 
 Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui on Radix UI, Supabase (`@supabase/ssr`).
 
@@ -184,6 +184,35 @@ The status `Select` on `/orders/[id]` calls the `updateOrderStatus` Server Actio
 - A new order is inserted before its `order_items`, in a separate statement with no transaction, so an `INSERT` event can arrive before the items exist. The list does not show items, so it is not affected.
 - A status change made in the admin refreshes twice: once from the action, once from the Realtime event. That is harmless.
 
+### Dashboard: aggregation in SQL functions, not in JS
+
+The dashboard (`/`) calls two Postgres functions through `supabase.rpc`, from migration `20261104145946_dashboard_stats.sql`. Postgres does the grouping and returns 30 + 5 rows, so the page never downloads every order to count them in JavaScript.
+
+- `orders_per_day(p_days)` returns one row per day: `day`, `orders`, `revenue`. Days come from `generate_series` and orders are `left join`ed, so a day with no orders is still a row with `0` instead of a gap in the chart. `count(o.id)` counts only matched orders (`count(*)` would count 1 on an empty day), and `coalesce` turns the empty day's `null` sum into `0`.
+- `top_products(p_limit, p_days)` returns the products with the most units sold in the same window. Ties are broken by `p.id`, so the order is stable between reloads.
+- Days are calendar days in `Europe/Kyiv`, not UTC. An order placed at 01:00 Kyiv time belongs to that day, not to the previous one.
+- The functions are `language sql stable` with `set search_path = ''` (every name is schema-qualified) and the default security invoker. They run with the caller's rights, so RLS applies: an admin aggregates all orders, a customer calling the same RPC would only aggregate their own.
+- The page adds up the KPIs (orders, revenue, average order) from the `orders_per_day` rows. The average is total revenue divided by total orders, not the mean of daily averages. The `rpc` return types come from the generated `database.types.ts`; `lib/dashboard.ts` names them for the chart props.
+
+### Charts: shadcn `chart` on Recharts, one client component per chart
+
+`components/orders-chart.tsx`, `revenue-chart.tsx` and `top-products-chart.tsx` are client components (Recharts needs the browser). The page fetches the data on the server and passes it as props.
+
+- The key in `ChartConfig` must equal the bar's `dataKey`. `ChartContainer` turns each key into a `--color-<key>` CSS variable, so `fill="var(--color-orders)"` only works when the config has an `orders` key.
+- Day values are date-only strings (`2026-11-05`), which `new Date()` parses as UTC midnight. `dayFormat` in `lib/format.ts` formats them with `timeZone: 'UTC'`; in the local time zone of a browser west of UTC every label would show the previous day.
+- The revenue tooltip uses `formatter` to show `$123.45`. A `formatter` replaces the whole tooltip row, so it renders the label as well. The axis uses `priceWithoutDecimalsFormat`.
+- Colors: `--chart-1` (blue) for counts, `--chart-2` (orange) for money, in `globals.css`. The shadcn preset ships gray chart colors; these have separate light and dark values, checked for color-blind separation and contrast against the card background in each theme.
+
+### Demo data: `supabase/scripts/demo-orders.sql`
+
+Local only, so the dashboard has something to show. It inserts 0-5 orders per day for the last 60 days, for the first `USER` profile, each with 1-3 products and a total at current prices:
+
+```bash
+docker exec -i supabase_db_FoodOrdering psql -U postgres < supabase/scripts/demo-orders.sql
+```
+
+Remove them with `delete from public.orders where payment_intent_id like 'demo_%';`. Their `order_items` go too, by `ON DELETE CASCADE`. `orders.payment_intent_id` is unique (the Stripe webhook relies on it for idempotency), so every demo order gets its own `demo_<uuid>`. Running the script twice doubles the data, so delete first.
+
 ## Next step
 
-Session 9: dashboard with orders per day, revenue and top products, aggregated on the server.
+Session 10: deploy the admin to Vercel against the hosted Supabase project.

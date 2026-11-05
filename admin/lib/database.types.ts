@@ -173,6 +173,22 @@ export type Database = {
     };
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      orders_per_day: {
+        Args: { p_days?: number };
+        Returns: {
+          day: string;
+          orders: number;
+          revenue: number;
+        }[];
+      };
+      top_products: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: {
+          name: string;
+          product_id: number;
+          quantity: number;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
