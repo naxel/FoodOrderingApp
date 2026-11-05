@@ -4,6 +4,8 @@ Web admin panel for the FoodOrdering app: products, orders, order status and a s
 
 Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui on Radix UI, Supabase (`@supabase/ssr`).
 
+Live: https://foodordering-admin.vercel.app (admin accounts only; any other signed-in user gets 403).
+
 ## Running locally
 
 Start the local Supabase from the repo root first (see the root [README](../README.md)), then:
@@ -32,6 +34,20 @@ npx prettier --write admin/lib/database.types.ts src/database.types.ts
 ```
 
 `gen types` writes unformatted output, so run Prettier after it or `prettier --check` fails.
+
+To check a production build locally, `npm run build && npm run start -- -p 3002`. Unlike `next dev`, `next start` does not move to a free port, so pass one when 3000 is taken.
+
+## Deployment (Vercel)
+
+The Vercel project `foodordering-admin` builds this folder from GitHub on every push to `main`.
+
+- **Root Directory: `admin`.** Build and install commands are the defaults (`npm install`, `next build`), using `admin/package-lock.json`.
+- **Environment variables** (Production and Preview): `NEXT_PUBLIC_SUPABASE_URL` (`https://<project-ref>.supabase.co`) and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the cloud `sb_publishable_...` key, never `sb_secret_...`). `NEXT_PUBLIC_*` values are inlined at build time, and `next.config.ts` builds `images.remotePatterns` from the URL, so a change needs a redeploy. Without the URL the build fails on `new URL(undefined)`.
+- **Function region: `cdg1` (Paris)**, next to the Supabase project in `eu-west-3`. One page view makes several sequential calls to Supabase (`getClaims`, `is_admin`, the data), so a function in the default `iad1` pays a transatlantic round trip on each.
+- The Supabase integration offered by Vercel was skipped: it creates a new, empty Supabase project instead of connecting the existing one.
+- Before deploying a change that needs new migrations or functions, push them to the cloud project first (`npx supabase db push`, `npx supabase functions deploy <name>`; see the root README).
+- Supabase Auth URLs were not changed. Sign-in is email and password, with no redirect back to the site, and the Site URL is used by the mobile app's emails.
+- `turbopack.root` is set to this folder because the repo has two lockfiles (root and `admin/`), and Next.js otherwise picks the repo root as the workspace root.
 
 ## Decisions
 
@@ -98,7 +114,7 @@ The `(admin)` layout renders the shadcn `Sidebar` (collapses to icons, a sheet o
 
 ### Products list: public Storage URLs through `next/image`
 
-`products.image` holds a path in the public `product-images` bucket, so the page builds the URL with `getPublicUrl()` (no network call) instead of downloading the file like the mobile app does. `next.config.ts` allows that path in `images.remotePatterns`, built from `NEXT_PUBLIC_SUPABASE_URL` so the cloud host works after deploy. Next.js 16 refuses to optimize images from private IPs (SSRF protection), and local Supabase is on `127.0.0.1`, so `dangerouslyAllowLocalIP` is on in development only. Optimized images are cached in `.next`, so the check fires only on a cache miss.
+`products.image` holds a path in the public `product-images` bucket, so the page builds the URL with `getPublicUrl()` (no network call) instead of downloading the file like the mobile app does. The bucket was first created by hand in Studio, and it turned out to be public locally but private in the cloud: on Vercel every image failed with `INVALID_IMAGE_OPTIMIZE_REQUEST`, because Storage answered the public URL with `Bucket not found`. Migration `20261105140715_product_images_bucket_public` now creates the bucket if it is missing and makes it public. Menu photos are public content anyway; uploading and deleting stay admin-only through the policies on `storage.objects`. `next.config.ts` allows that path in `images.remotePatterns`, built from `NEXT_PUBLIC_SUPABASE_URL` so the cloud host works after deploy. Next.js 16 refuses to optimize images from private IPs (SSRF protection), and local Supabase is on `127.0.0.1`, so `dangerouslyAllowLocalIP` is on only when `NEXT_PUBLIC_SUPABASE_URL` points at `127.0.0.1`. It used to depend on `NODE_ENV`, which blocked the images in `next start` against the local stack. Optimized images are cached in `.next`, so the check fires only on a cache miss.
 
 Queries use `.throwOnError()`. Without it supabase-js returns a plain object typed as `PostgrestError`, and throwing that shows `{code: …, message: …}` in `error.tsx` instead of the message.
 
@@ -111,6 +127,8 @@ With `cacheComponents` and `partialPrefetching`, Next.js prerenders an App Shell
 `lib/schemas/product.ts` is shared. `components/product-form.tsx` validates with `zodResolver` and calls a Server Action with the parsed object; the action runs `safeParse` again, because a Server Action is a public POST endpoint. The page passes `submitLabel` and `onSave` explicitly (`updateProduct.bind(null, id)` for edit), so the form does not guess its mode from the data.
 
 With Cache Components, Next.js hides visited pages with React `<Activity>` instead of unmounting them, so a form keeps its values after navigation. The form resets itself in a `useLayoutEffect` cleanup, which runs when the page is hidden.
+
+For the same reason the edit page passes the product as `values`, not only as `defaultValues`. `useForm` reads `defaultValues` once, on mount; a page kept in `<Activity>` stays mounted, so after an update and a return to the page the form showed the old price, although the new one was in its props. `values` is compared on every render and resets the form (and its defaults) when it changes.
 
 RLS rejects a forbidden `insert` with an error, but a forbidden `update` or `delete` just matches zero rows and succeeds. `updateProduct` asks for the row back with `.select('id')` and treats an empty result as "not found or access denied".
 
@@ -215,4 +233,4 @@ Remove them with `delete from public.orders where payment_intent_id like 'demo_%
 
 ## Next step
 
-Session 10: deploy the admin to Vercel against the hosted Supabase project.
+Session 10b: move the mobile app to Expo SDK 58 (Expo Go on the phone no longer opens SDK 57), then check a push notification from a status change end to end. After that, the Supabase CLI v3 upgrade and session 11, Turborepo.
