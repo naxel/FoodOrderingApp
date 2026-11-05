@@ -12,10 +12,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/**`),
     ],
-    dangerouslyAllowLocalIP: process.env.NODE_ENV === 'development',
+    dangerouslyAllowLocalIP:
+      new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname === '127.0.0.1',
   },
   partialPrefetching: true,
   turbopack: {
+    root: __dirname,
     rules: {
       '*.css': {
         loaders: ['@tailwindcss/turbopack'],

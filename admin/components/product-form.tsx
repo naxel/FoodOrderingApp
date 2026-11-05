@@ -22,7 +22,8 @@ type Props = {
 export function ProductForm({ defaultValues, onSave, submitLabel, imageUrl }: Props) {
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema),
-    defaultValues: defaultValues ?? { name: '', price: NaN },
+    defaultValues: { name: '', price: NaN },
+    values: defaultValues,
   });
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
