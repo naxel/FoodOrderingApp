@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Image, TextInput, Alert } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { defaultPizzaImage } from '@components/ProductListItem';
 import Colors from '@/constants/Colors';
 import Button from '@components/Button';
@@ -18,24 +18,23 @@ const CreateScreen = () => {
   const [price, setPrice] = useState('');
   const [errors, setErrors] = useState('');
 
-  const { id: idString } = useLocalSearchParams();
+  const { id: idString } = useLocalSearchParams<{ id?: string }>();
   const isUpdating = !!idString;
+  const id = parseFloat(idString ?? '');
 
   const { mutate: insertProduct } = useInsertProduct();
   const { mutate: updateProduct } = useUpdateProduct();
-  const id = parseFloat(typeof idString === 'string' ? idString : idString?.[0]);
   const { data: updatingProduct } = useProduct(id);
   const { mutate: deleteProduct } = useDeleteProduct();
+  const [loadedProduct, setLoadedProduct] = useState(updatingProduct);
+  if (updatingProduct && updatingProduct !== loadedProduct) {
+    setLoadedProduct(updatingProduct);
+    setName(updatingProduct.name);
+    setPrice(updatingProduct.price.toString());
+    setImage(updatingProduct.image);
+  }
 
   const router = useRouter();
-
-  useEffect(() => {
-    if (updatingProduct) {
-      setName(updatingProduct.name);
-      setPrice(updatingProduct.price.toString());
-      setImage(updatingProduct.image);
-    }
-  }, [updatingProduct]);
 
   const validateInput = () => {
     setErrors('');

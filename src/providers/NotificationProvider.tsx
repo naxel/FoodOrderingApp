@@ -1,4 +1,5 @@
 import { PropsWithChildren, useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { registerForPushNotificationsAsync } from '@/lib/notifications';
 import * as Notifications from 'expo-notifications';
 import { supabase } from '@/lib/supabase';
@@ -6,9 +7,6 @@ import { useAuth } from '@/providers/AuthProvider';
 
 const NotificationProvider = ({ children }: PropsWithChildren) => {
   const [expoPushToken, setExpoPushToken] = useState<string>();
-  const [notification, setNotification] = useState<Notifications.Notification | undefined>(
-    undefined,
-  );
   const { profile } = useAuth();
 
   useEffect(() => {
@@ -16,16 +14,14 @@ const NotificationProvider = ({ children }: PropsWithChildren) => {
       .then(setExpoPushToken)
       .catch((e) => console.warn('push registration failed', e));
 
-    const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
-      setNotification(notification);
-    });
-
     const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log(response);
+      const orderId = response.notification.request.content.data?.orderId;
+      if (typeof orderId === 'number') {
+        router.push(`/(user)/orders/${orderId}`);
+      }
     });
 
     return () => {
-      notificationListener.remove();
       responseListener.remove();
     };
   }, []);
@@ -41,7 +37,7 @@ const NotificationProvider = ({ children }: PropsWithChildren) => {
       .then(({ error }) => {
         if (error) console.warn('save push token failed', error);
       });
-  }, [expoPushToken, profile?.id]);
+  }, [expoPushToken, profile?.id, profile?.expo_push_token]);
 
   return <>{children}</>;
 };

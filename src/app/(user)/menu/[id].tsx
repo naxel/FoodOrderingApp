@@ -11,9 +11,9 @@ import RemoteImage from '@components/RemoteImage';
 const sizes: PizzaSize[] = ['S', 'M', 'L', 'XL'];
 
 const ProductDetailsScreen = () => {
-  const { id: idString } = useLocalSearchParams();
+  const { id: idString } = useLocalSearchParams<{ id: string }>();
+  const id = parseFloat(idString);
   const { addItem } = useCart();
-  const id = parseFloat(typeof idString === 'string' ? idString : idString[0]);
   const { data: product, error, isLoading } = useProduct(id);
 
   const router = useRouter();

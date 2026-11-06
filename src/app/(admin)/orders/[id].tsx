@@ -15,8 +15,8 @@ import Colors from '@/constants/Colors';
 import { useOrderDetails, useUpdateOrderStatus } from '@/api/orders';
 
 const OrderDetailScreen = () => {
-  const { id: idString } = useLocalSearchParams();
-  const id = parseFloat(typeof idString === 'string' ? idString : idString[0]);
+  const { id: idString } = useLocalSearchParams<{ id: string }>();
+  const id = parseFloat(idString);
   const { data: order, error, isLoading } = useOrderDetails(id);
   const { mutateAsync: updateOrderStatus } = useUpdateOrderStatus();
 

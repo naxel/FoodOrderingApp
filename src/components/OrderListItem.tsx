@@ -13,9 +13,9 @@ type OrderListItemProps = {
 
 const OrderListItem = ({ order }: OrderListItemProps) => {
   const segments = useSegments();
-
+  const group = segments[0] === '(admin)' ? '(admin)' : '(user)';
   return (
-    <Link href={`/${segments[0]}/orders/${order.id}`} asChild>
+    <Link href={`/${group}/orders/${order.id}`} asChild>
       <Pressable style={styles.container}>
         <View>
           <Text style={styles.title}>Order #{order.id}</Text>

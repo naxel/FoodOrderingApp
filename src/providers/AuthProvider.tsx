@@ -22,17 +22,17 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState<boolean>(true);
   useEffect(() => {
     const loadProfile = async (session: Session | null) => {
-      setSession(session);
-      if (!session) {
-        setProfile(null);
-      } else {
+      let profile: Profile | null = null;
+      if (session) {
         const { data } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-        setProfile(data || null);
+        profile = data || null;
       }
+      setSession(session);
+      setProfile(profile);
       setLoading(false);
     };
 

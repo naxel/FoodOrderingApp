@@ -7,8 +7,8 @@ import { useProduct } from '@/api/products';
 import RemoteImage from '@components/RemoteImage';
 
 const ProductDetailsScreen = () => {
-  const { id: idString } = useLocalSearchParams();
-  const id = parseFloat(typeof idString === 'string' ? idString : idString[0]);
+  const { id: idString } = useLocalSearchParams<{ id: string }>();
+  const id = parseFloat(idString);
   const { data: product, error, isLoading } = useProduct(id);
 
   if (isLoading) {

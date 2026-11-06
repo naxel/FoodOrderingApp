@@ -5,7 +5,7 @@ import { Link, Redirect } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 
-const index = () => {
+export default function Index() {
   const { session, loading, isAdmin } = useAuth();
 
   if (loading) {
@@ -28,6 +28,4 @@ const index = () => {
       <Button text="Sign out" onPress={() => supabase.auth.signOut()} />
     </View>
   );
-};
-
-export default index;
+}

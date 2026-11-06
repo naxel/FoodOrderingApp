@@ -28,7 +28,7 @@ export const useMyOrderList = () => {
   return useQuery({
     queryKey: ['orders', { userId: id }],
     queryFn: async () => {
-      if (!id) return null;
+      if (!id) return [];
       const { data, error } = await supabase
         .from('orders')
         .select('*')

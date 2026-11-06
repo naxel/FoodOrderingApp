@@ -16,7 +16,7 @@ export const useInsertOrderSubscription = () => {
       // name would return it already subscribed; removeChannel drops it
       supabase.removeChannel(ordersSubscription);
     };
-  }, []);
+  }, [queryClient]);
 };
 
 export const useUpdateOrderSubscription = (id: number) => {
@@ -41,7 +41,7 @@ export const useUpdateOrderSubscription = (id: number) => {
     return () => {
       supabase.removeChannel(orders);
     };
-  }, [id]);
+  }, [id, queryClient]);
 };
 
 export const useMyOrdersSubscription = (userId: string | undefined) => {
