@@ -28,8 +28,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # from `npx supabase s
 Database types, from the repo root:
 
 ```bash
-npx supabase gen types typescript --local > admin/lib/database.types.ts
-npx supabase gen types typescript --local > src/database.types.ts
+npx supabase gen types typescript > admin/lib/database.types.ts
+npx supabase gen types typescript > src/database.types.ts
 npx prettier --write admin/lib/database.types.ts src/database.types.ts
 ```
 
@@ -45,7 +45,7 @@ The Vercel project `foodordering-admin` builds this folder from GitHub on every 
 - **Environment variables** (Production and Preview): `NEXT_PUBLIC_SUPABASE_URL` (`https://<project-ref>.supabase.co`) and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the cloud `sb_publishable_...` key, never `sb_secret_...`). `NEXT_PUBLIC_*` values are inlined at build time, and `next.config.ts` builds `images.remotePatterns` from the URL, so a change needs a redeploy. Without the URL the build fails on `new URL(undefined)`.
 - **Function region: `cdg1` (Paris)**, next to the Supabase project in `eu-west-3`. One page view makes several sequential calls to Supabase (`getClaims`, `is_admin`, the data), so a function in the default `iad1` pays a transatlantic round trip on each.
 - The Supabase integration offered by Vercel was skipped: it creates a new, empty Supabase project instead of connecting the existing one.
-- Before deploying a change that needs new migrations or functions, push them to the cloud project first (`npx supabase db push`, `npx supabase functions deploy <name>`; see the root README).
+- Before deploying a change that needs new migrations or functions, push them to the cloud project first (`npx supabase db push --remote`, `npx supabase functions deploy <name>`; see the root README). With Supabase CLI v3, `db push` without `--remote` goes to the local database.
 - Supabase Auth URLs were not changed. Sign-in is email and password, with no redirect back to the site, and the Site URL is used by the mobile app's emails.
 - `turbopack.root` is set to this folder because the repo has two lockfiles (root and `admin/`), and Next.js otherwise picks the repo root as the workspace root.
 

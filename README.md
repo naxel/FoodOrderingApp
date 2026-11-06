@@ -214,7 +214,7 @@ applied. Mark it right away with `migration repair` (below), otherwise the next
 ```bash
 npx supabase db diff --schema public            # preview only, no file written
 npx supabase db diff -f restrict_profile_updates
-npx supabase migration repair --local --status applied 20261020142057   # its timestamp
+npx supabase migration repair --status applied 20261020142057   # its timestamp
 ```
 
 `db diff` sees only schema (tables, policies, grants, functions). Rows such as bucket limits in
@@ -228,19 +228,21 @@ Review the generated file before committing:
   `REVOKE UPDATE` / `GRANT UPDATE (cols)` come out as `REVOKE ALL` plus one grant per column.
   The result is the same; you can replace the body with the shorter SQL.
 
-### `npx supabase migration list --local`
+### `npx supabase migration list`
 
 Shows which migration files the local database has recorded as applied. The CLI decides what
 to run from the table `supabase_migrations.schema_migrations`, not from the actual schema.
-Without `--local`, it compares local files with the linked cloud project.
+With `--remote`, it compares local files with the linked cloud project instead.
 
 ```bash
-npx supabase migration list --local
-# "local" = file in supabase/migrations/, "remote" = recorded in the local DB.
-# A version with an empty "remote" column will be run by the next `migration up`.
+npx supabase migration list
+# "Local" = file in supabase/migrations/, "Local DB" = recorded in the local database.
+# A version with an empty "Local DB" column will be run by the next `migration up`.
+npx supabase migration list --remote
+# Same table against the cloud ("Remote"); an empty cell will be applied by `db push --remote`.
 ```
 
-### `npx supabase migration repair --local --status applied <version...>`
+### `npx supabase migration repair --status applied <version...>`
 
 Edits only the migration history: it marks versions as applied (or `--status reverted` to
 unmark) **without running their SQL**. Use it when the change is already in the database
@@ -257,15 +259,15 @@ Fix:
 
 ```bash
 # 1. find versions missing from the history
-npx supabase migration list --local
+npx supabase migration list
 # 2. check in the DB that their changes really are there, then mark only those
-npx supabase migration repair --local --status applied 20261015101310 20261018101918
+npx supabase migration repair --status applied 20261015101310 20261018101918
 # 3. run the rest
 npx supabase migration up
 ```
 
 Never mark a migration whose changes are **not** in the database: it would be skipped forever
-locally. `--linked` does the same for the cloud project's history.
+locally. `--remote` does the same for the cloud project's history.
 
 `npx supabase db reset` also fixes the history (it rebuilds the local DB from all migrations),
 but it wipes local data: users, orders, storage objects.
@@ -298,11 +300,23 @@ Replace `<project-ref>` below with your project's ref — the subdomain of
 General. Run `npx supabase login` once before the
 commands below.
 
+**Supabase CLI v3: local by default.** `db push`, `db pull`, `db dump`, `migration list` /
+`repair`, `gen types` and `storage` commands target the **local** stack unless you pass
+`--remote` (the linked project). Without it, `npx supabase db push` applies the migrations to
+the local database and the cloud stays behind, with no error. Every command prints its target
+first: `Target: local stack (127.0.0.1:54322) · default` or
+`Target: project FoodOrdering (<project-ref>) · production`. `--linked` and `--project-ref` still
+work but print a warning; `--local` does nothing.
+
+Commands that change the cloud (`db push --remote`, `functions deploy`, `secrets set`) ask for
+confirmation, and **the default answer is No**: pressing Enter declines. In CI or any
+non-interactive run, pass `--yes`.
+
 ### `npx supabase link --project-ref <project-ref>`
 
 Links this local folder to the cloud project. The CLI stores the ref in `supabase/.temp/`, so
-later commands (`functions deploy`, `secrets set`, `db push`, `gen types --linked`) know which
-project to target without `--project-ref`. It may ask for the database password (from the
+later commands (`functions deploy`, `secrets set`, `db push --remote`, `gen types --remote`)
+know which project to target. It may ask for the database password (from the
 Supabase Dashboard → Project Settings → Database).
 
 Run it once per machine/clone, or again to switch to a different project. It doesn't change the
@@ -370,7 +384,7 @@ When a migration takes away something the **running** code still uses, deploy th
 1. `npx supabase secrets set ...` for any new secret;
 2. `npx supabase functions deploy <changed functions>`;
 3. release the app version that uses them (old builds may stop working at step 4);
-4. `npx supabase db push`.
+4. `npx supabase db push --remote`.
 
 Examples from this project:
 
@@ -384,7 +398,7 @@ Examples from this project:
 When a migration only **adds** something (a column, a table), push it before the code that
 uses it.
 
-### `npx supabase db push`
+### `npx supabase db push --remote`
 
 Applies to the **cloud database** the migrations from `supabase/migrations/` that it hasn't
 run yet (the cloud tracks applied ones in `supabase_migrations.schema_migrations`). Uses the
@@ -393,18 +407,20 @@ project from `link`.
 Preview first, since nothing gets applied in this mode:
 
 ```bash
-npx supabase db push --dry-run
+npx supabase db push --remote --dry-run
 # Would push these migrations:
 #  • 20261020142057_restrict_profile_updates.sql
-npx supabase db push
+npx supabase db push --remote
 ```
+
+Without `--remote` (CLI v3), the same command pushes to the local database instead.
 
 If a pending migration takes away something the running code uses, deploy the code first. See
 [Deploy order](#deploy-order).
 
 After a push, regenerate types (below) if the schema changed.
 
-### `npx supabase gen types typescript --project-id <project-ref> > src/database.types.ts`
+### `npx supabase gen types typescript --remote > src/database.types.ts`
 
 Reads the schema of the **cloud** database (tables, views, enums, functions) and writes
 matching TypeScript types to `src/database.types.ts`. The app uses them in
@@ -414,8 +430,9 @@ matching TypeScript types to `src/database.types.ts`. The app uses them in
 Run it after every schema change (new table/column, e.g. `expo_push_token`) once the change is
 applied to the cloud database. The file is fully overwritten — never edit it by hand.
 
-To generate from the local Docker database instead (before pushing migrations):
+To generate from the local Docker database instead (before pushing migrations), drop
+`--remote`; local is the default:
 
 ```bash
-npx supabase gen types typescript --local > src/database.types.ts
+npx supabase gen types typescript > src/database.types.ts
 ```
