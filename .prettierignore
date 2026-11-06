@@ -3,4 +3,5 @@ ios
 android
 .expo
 dist
-admin/.next
+apps/admin/.next
+next-env.d.ts

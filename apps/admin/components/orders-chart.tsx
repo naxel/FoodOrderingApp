@@ -23,7 +23,9 @@ export function OrdersChart({ data }: { data: OrdersPerDay }) {
         <YAxis allowDecimals={false} width={30} tickLine={false} axisLine={false} />
         <ChartTooltip
           content={
-            <ChartTooltipContent labelFormatter={(value) => dayFormat.format(new Date(value))} />
+            <ChartTooltipContent
+              labelFormatter={(value) => dayFormat.format(new Date(String(value)))}
+            />
           }
         />
         <Bar dataKey="orders" fill="var(--color-orders)" radius={4} />

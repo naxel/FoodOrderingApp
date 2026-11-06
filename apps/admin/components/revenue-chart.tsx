@@ -37,7 +37,7 @@ export function RevenueChart({ data }: { data: OrdersPerDay }) {
                   </span>
                 </div>
               )}
-              labelFormatter={(value) => dayFormat.format(new Date(value))}
+              labelFormatter={(value) => dayFormat.format(new Date(String(value)))}
             />
           }
         />
