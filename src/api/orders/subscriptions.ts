@@ -43,3 +43,24 @@ export const useUpdateOrderSubscription = (id: number) => {
     };
   }, [id]);
 };
+
+export const useMyOrdersSubscription = (userId: string | undefined) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`my-orders-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `user_id=eq.${userId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['orders', { userId }] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+};

@@ -1,5 +1,11 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+  enableLegacyHeaderAppearance,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -17,11 +23,14 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(user)',
+  anchor: '(user)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// SDK 58 makes the iOS 26 Stack header transparent (Liquid Glass) by default; screens are laid out for an opaque one
+enableLegacyHeaderAppearance();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

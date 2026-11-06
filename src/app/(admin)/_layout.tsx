@@ -1,14 +1,15 @@
 import { SymbolView } from 'expo-symbols';
 import { Redirect, Tabs } from 'expo-router';
-
 import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading } = useAuth();
+  const headerShown = useClientOnlyValue(false, true);
+  if (loading) {
+    return null;
+  }
   if (!isAdmin) {
     return <Redirect href="/" />;
   }
@@ -20,7 +21,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: 'gainsboro',
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        headerShown,
         tabBarStyle: { backgroundColor: Colors.light.tint },
       }}
     >
@@ -54,6 +55,23 @@ export default function TabLayout() {
                 ios: 'list.bullet',
                 android: 'list',
                 web: 'list',
+              }}
+              tintColor={color}
+              size={20}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{
+                ios: 'person',
+                android: 'person',
+                web: 'person',
               }}
               tintColor={color}
               size={20}

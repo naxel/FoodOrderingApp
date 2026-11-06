@@ -2,9 +2,13 @@ import { ActivityIndicator, FlatList, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import OrderListItem from '@components/OrderListItem';
 import { useMyOrderList } from '@/api/orders';
+import { useMyOrdersSubscription } from '@/api/orders/subscriptions';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function OrdersScreen() {
   const { data: orders, error, isLoading } = useMyOrderList();
+  const { session } = useAuth();
+  useMyOrdersSubscription(session?.user.id);
   if (isLoading) {
     return <ActivityIndicator />;
   }

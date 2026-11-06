@@ -20,6 +20,7 @@ export async function registerForPushNotificationsAsync() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
+      // eslint-disable-next-line import/namespace -- re-exported from NotificationChannelManager.types, the plugin misses the SDK 58 build format
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF231F7C',

@@ -1,6 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { Link, Redirect, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
+import { Redirect, Tabs } from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -9,8 +8,12 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const headerShown = useClientOnlyValue(false, true);
+
+  if (loading) {
+    return null;
+  }
 
   if (!session) {
     return <Redirect href={'/sign-in'} />;

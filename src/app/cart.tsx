@@ -1,4 +1,4 @@
-import { Image, Text, View, StyleSheet, Pressable, Platform, FlatList } from 'react-native';
+import { Text, View, Platform, FlatList } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useCart } from '@/providers/CartProvider';
 import CartListItem from '@components/CartListItem';

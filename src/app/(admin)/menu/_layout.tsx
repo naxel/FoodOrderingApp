@@ -1,5 +1,4 @@
 import { Link, Stack } from 'expo-router';
-import { Menu } from 'expo-router/build/primitives/menu';
 import { Pressable } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import Colors from '@/constants/Colors';

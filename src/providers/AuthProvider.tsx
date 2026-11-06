@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, use, useContext, useEffect, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import { Profile } from '@/types';
@@ -21,14 +21,11 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   useEffect(() => {
-    const fetchSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const loadProfile = async (session: Session | null) => {
       setSession(session);
-
-      if (session) {
-        // fetch profile
+      if (!session) {
+        setProfile(null);
+      } else {
         const { data } = await supabase
           .from('profiles')
           .select('*')
@@ -38,10 +35,15 @@ export default function AuthProvider({ children }: PropsWithChildren) {
       }
       setLoading(false);
     };
-    fetchSession();
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+
+    // fires INITIAL_SESSION on subscribe, so a separate getSession() is not needed
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      // don't await Supabase calls inside the callback: it holds the auth lock and can deadlock
+      setTimeout(() => loadProfile(session), 0);
     });
+    return () => subscription.unsubscribe();
   }, []);
   return (
     <AuthContext.Provider
