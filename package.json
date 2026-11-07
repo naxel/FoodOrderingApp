@@ -1,11 +1,16 @@
 {
   "name": "foodordering",
+  "packageManager": "npm@10.9.9",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "mobile": "npm run start -w @foodordering/mobile",
     "admin": "npm run dev -w @foodordering/admin",
     "supabase:restart": "supabase stop && supabase start",
@@ -14,6 +19,7 @@
   },
   "devDependencies": {
     "prettier": "^3.9.10",
-    "supabase": "^3.0.0"
+    "supabase": "^3.0.0",
+    "turbo": "^2.11.10"
   }
 }
