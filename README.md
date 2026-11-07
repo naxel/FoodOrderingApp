@@ -1,14 +1,57 @@
 # FoodOrdering
 
-Expo app + local Supabase (Postgres, Storage, Auth, Edge Functions) running in Docker.
+A food ordering app: an Expo app for customers and staff, a Next.js web admin, and one Supabase backend (Postgres,
+Auth, Storage, Realtime, Edge Functions) with Stripe payments. Supabase runs locally in Docker.
 
-## Supabase scripts
+## Repository layout
 
-| Script                     | Command                                             |
-| -------------------------- | --------------------------------------------------- |
-| `npm run supabase:restart` | `supabase stop && supabase start`                   |
-| `npm run functions:serve`  | `supabase functions serve`                          |
-| `npm run functions:logs`   | `docker logs -f supabase_edge_runtime_FoodOrdering` |
+npm workspaces with Turborepo:
+
+```
+apps/mobile     Expo app (SDK 58): menu, cart, Stripe checkout, orders; staff screens for ADMIN users
+apps/admin      Next.js 16 web admin: products, orders, order status, dashboard (see its README)
+packages/core   @foodordering/core: generated database types, order statuses, price format
+supabase/       migrations, Edge Functions, config.toml (the Supabase CLI runs from the root)
+```
+
+![Web admin dashboard](apps/admin/screenshots/dashboard.png)
+
+The web admin is live at https://foodordering-admin.vercel.app (admin accounts only); see
+[apps/admin/README.md](apps/admin/README.md).
+
+There is one `package-lock.json`, at the root. Run `npm install` from the root only; it links the workspaces into
+`node_modules/@foodordering/*`.
+
+`packages/core` is a just-in-time package: its `exports` point at the `.ts` sources and it has no build step. Each app's
+bundler compiles it (Metro on its own, Next.js through `transpilePackages`). Import it by subpath, for example
+`import { priceFormat } from '@foodordering/core/format'`. UI-specific code (badge variants, date formats) stays in the
+app that uses it.
+
+## Scripts
+
+All from the repo root.
+
+| Script                     | What it does                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `npm run mobile`           | `expo start` in `apps/mobile`                                                    |
+| `npm run admin`            | `next dev` in `apps/admin`                                                       |
+| `npm run dev`              | both, through Turborepo; Expo keys (`r`, `i`, `j`) work only in `npm run mobile` |
+| `npm run lint`             | ESLint in every workspace (`turbo run lint`)                                     |
+| `npm run typecheck`        | `tsc --noEmit` in every workspace, `packages/core` first                         |
+| `npm run build`            | `next build` of the admin (the mobile app has no `build` task)                   |
+| `npm run gen:types`        | database types from the local stack into `packages/core`, then Prettier          |
+| `npm run gen:types:remote` | the same from the cloud project                                                  |
+| `npm run supabase:restart` | `supabase stop && supabase start`                                                |
+| `npm run functions:serve`  | `supabase functions serve`                                                       |
+| `npm run functions:logs`   | `docker logs -f supabase_edge_runtime_FoodOrdering`                              |
+
+Turborepo caches `lint`, `typecheck` and `build`: a second run with no changes prints `FULL TURBO` and replays the
+output. `npx turbo run lint typecheck --force` ignores the cache. Turborepo 2 runs tasks in strict env mode, so an
+environment variable that the admin build reads must be listed in `env` in `turbo.json`; otherwise it does not reach
+`next build` (on Vercel the `NEXT_PUBLIC_*` values come from the environment, not from a file).
+
+To run a script of one workspace, use `-w`: `npm run build -w @foodordering/admin`. Arguments for the script go
+after `--`: `npm run start -w @foodordering/mobile -- -c`.
 
 ### `npm run supabase:restart`
 
@@ -162,19 +205,22 @@ Each forwarded event shows up as `payment_intent.succeeded [200]`.
 
 ## Running the app
 
-### `npx expo start -c`
+### `npm run start -w @foodordering/mobile -- -c`
 
-Starts the Metro dev server (same as `npm start`), and `-c` (`--clear`) wipes the Metro
+Starts the Metro dev server in `apps/mobile` (`expo start`), and `-c` (`--clear`) wipes the Metro
 bundler cache first. Scan the QR code or press `i` / `a` to open the app.
 
 Use `-c` when the app shows stale code or config that a normal reload doesn't fix:
 
-- after changing `.env` — `EXPO_PUBLIC_*` variables are inlined into the bundle, so the old
+- after changing `apps/mobile/.env` or `.env.local` — `EXPO_PUBLIC_*` variables are inlined into the bundle, so the old
   values stay cached;
 - after changing `babel.config.js`, `metro.config.js` or `app.json`;
 - after installing/removing packages or switching branches.
 
-The first bundle after `-c` is slower; for everyday work plain `npx expo start` is enough.
+The first bundle after `-c` is slower; for everyday work plain `npm run mobile` is enough.
+
+Expo and EAS commands that work on the app (`npx expo install`, `npx expo-doctor`, `eas build`) run from
+`apps/mobile`.
 
 ## Database migrations
 
@@ -420,19 +466,17 @@ If a pending migration takes away something the running code uses, deploy the co
 
 After a push, regenerate types (below) if the schema changed.
 
-### `npx supabase gen types typescript --remote > src/database.types.ts`
+### `npm run gen:types:remote`
 
-Reads the schema of the **cloud** database (tables, views, enums, functions) and writes
-matching TypeScript types to `src/database.types.ts`. The app uses them in
-`src/lib/supabase.ts` (`createClient<Database>`) and `src/types.ts`, so queries like
-`supabase.from('orders').select()` get typed rows and autocomplete.
+Runs `npx supabase gen types typescript --remote`, which reads the schema of the **cloud**
+database (tables, views, enums, functions), writes matching TypeScript types to
+`packages/core/src/database.types.ts`, and formats the file with Prettier (`gen types` output
+is unformatted). Both apps import them from `@foodordering/core/database.types`
+(`createClient<Database>` in `apps/mobile/src/lib/supabase.ts` and `apps/admin/lib/supabase/`),
+so queries like `supabase.from('orders').select()` get typed rows and autocomplete.
 
 Run it after every schema change (new table/column, e.g. `expo_push_token`) once the change is
 applied to the cloud database. The file is fully overwritten — never edit it by hand.
 
-To generate from the local Docker database instead (before pushing migrations), drop
-`--remote`; local is the default:
-
-```bash
-npx supabase gen types typescript > src/database.types.ts
-```
+To generate from the local Docker database instead (before pushing migrations), use
+`npm run gen:types`; local is the default.

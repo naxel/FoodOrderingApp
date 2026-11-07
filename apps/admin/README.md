@@ -7,45 +7,50 @@ Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui 
 
 Live: https://foodordering-admin.vercel.app (admin accounts only; any other signed-in user gets 403).
 
+![Dashboard: orders and revenue per day for the last 30 days, top 5 products](screenshots/dashboard.png)
+
+The screenshot is the local stack with demo orders from `supabase/scripts/demo-orders.sql`.
+
 ## Running locally
 
-Start the local Supabase from the repo root first (see the root [README](../../README.md)), then:
+Start the local Supabase first (see the root [README](../../README.md)), then from the repo root:
 
 ```bash
-cd admin
 npm install
-npm run dev
+npm run admin
 ```
 
 Open http://localhost:3000. If port 3000 is taken, Next.js picks the next free one (3001, 3002, ...) and prints it in
 the terminal.
 
-`admin/.env.local`:
+`apps/admin/.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # from `npx supabase status`
 ```
 
-Database types, from the repo root:
+Database types live in `packages/core` and are shared with the mobile app. Regenerate them from the repo root with
+`npm run gen:types` (local stack) or `npm run gen:types:remote` (cloud); the script runs Prettier on the output.
+
+To check a production build locally, from the repo root:
 
 ```bash
-npx supabase gen types typescript > admin/lib/database.types.ts
-npx supabase gen types typescript > src/database.types.ts
-npx prettier --write admin/lib/database.types.ts src/database.types.ts
+npm run build -w @foodordering/admin
+npm run start -w @foodordering/admin -- -p 3002
 ```
 
-`gen types` writes unformatted output, so run Prettier after it or `prettier --check` fails.
-
-To check a production build locally, `npm run build && npm run start -- -p 3002`. Unlike `next dev`, `next start` does
-not move to a free port, so pass one when 3000 is taken.
+Unlike `next dev`, `next start` does not move to a free port, so pass one when 3000 is taken.
 
 ## Deployment (Vercel)
 
 The Vercel project `foodordering-admin` builds this folder from GitHub on every push to `main`.
 
-- **Root Directory: `admin`.** Build and install commands are the defaults (`npm install`, `next build`), using
-  `admin/package-lock.json`.
+- **Root Directory: `apps/admin`**, with "Include files outside the root directory" on. Vercel sees the npm workspaces
+  and installs from the repo root with the root `package-lock.json`, so `@foodordering/core` is linked. The build
+  command is the default `next build`; Turborepo is not used on Vercel yet.
+- The Root Directory was changed from `admin` before the monorepo branch was merged. A push to `main` with the old path
+  would have failed the production deploy.
 - **Environment variables** (Production and Preview): `NEXT_PUBLIC_SUPABASE_URL` (`https://<project-ref>.supabase.co`)
   and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the cloud `sb_publishable_...` key, never `sb_secret_...`).
   `NEXT_PUBLIC_*` values are inlined at build time, and `next.config.ts` builds `images.remotePatterns` from the URL, so
@@ -60,20 +65,24 @@ The Vercel project `foodordering-admin` builds this folder from GitHub on every 
   `db push` without `--remote` goes to the local database.
 - Supabase Auth URLs were not changed. Sign-in is email and password, with no redirect back to the site, and the Site
   URL is used by the mobile app's emails.
-- `turbopack.root` is set to this folder because the repo has two lockfiles (root and `admin/`), and Next.js otherwise
-  picks the repo root as the workspace root.
+- `turbopack.root` is the repo root (`path.join(__dirname, '../..')`), because the dependencies are installed there.
+  Turbopack also writes a loader cache to `.next/build/` at the root, which is git-ignored.
+- `transpilePackages: ['@foodordering/core']`, because the shared package is TypeScript source with no build step.
 
 ## Decisions
 
-### A separate Next.js app in `admin/`, not inside the Expo app
+### A separate Next.js app in `apps/admin`, not inside the Expo app
 
 The Expo app already has an admin section on mobile. The web admin is a separate Next.js app so that it can use server
-rendering, Server Actions and a server-side Supabase session, which Expo Router web does not give. It lives in `admin/`
-with its own `package.json` for now; the plan is to move both apps into a Turborepo (`apps/mobile`, `apps/admin`,
-`packages/core` with the shared Supabase types and order statuses).
+rendering, Server Actions and a server-side Supabase session, which Expo Router web does not give.
 
-The root `tsconfig.json`, `eslint.config.js` and `.prettierignore` exclude `admin/` so the Expo tooling does not check
-Next.js files.
+It started in `admin/` with its own `package.json` and lockfile. Both apps now live in one npm workspaces repo with
+Turborepo (`apps/mobile`, `apps/admin`, `packages/core`). Each app keeps its own `tsconfig.json` and ESLint config, so
+the Expo and Next.js tooling no longer need to exclude each other's files. The shared database types, order statuses
+and price format come from `@foodordering/core`.
+
+npm workspaces rather than pnpm: the mobile app already used npm, and Expo resolves hoisted npm workspaces without extra
+Metro config. React 19.3 is the same version in both apps, so there is one copy in the root `node_modules`.
 
 ### The admin reuses the mobile app's database rules
 
@@ -126,8 +135,8 @@ shadcn 4 generates `lib/utils.ts` as `export { cn } from "cn"`. `cn` is shadcn's
 
 ### No `src/` directory
 
-`app/`, `components/` and `lib/` sit at the top of `admin/`, which is what shadcn and the course expect. The `@/*` alias
-points at `admin/`.
+`app/`, `components/` and `lib/` sit at the top of `apps/admin/`, which is what shadcn and the course expect. The `@/*`
+alias points at `apps/admin/`.
 
 ### 403 with `forbidden()`, not a redirect
 
@@ -268,7 +277,7 @@ reason as `forbidden()`.
 the active one), so the page stays a Server Component, a filtered list has its own URL, and Back works.
 
 `orders.status` is a `text` column with no CHECK constraint, so the value from the URL and the value from the row are
-both checked with `isOrderStatus()` from `lib/orders.ts`. An unknown `?status=` shows all orders instead of an empty
+both checked with `isOrderStatus()` from `@foodordering/core/orders`. An unknown `?status=` shows all orders instead of an empty
 list, and `OrderStatusBadge` renders an unknown row status as plain text instead of crashing on the badge variant
 lookup.
 
@@ -353,7 +362,9 @@ the browser). The page fetches the data on the server and passes it as props.
   `lib/format.ts` formats them with `timeZone: 'UTC'`; in the local time zone of a browser west of UTC every label would
   show the previous day.
 - The revenue tooltip uses `formatter` to show `$123.45`. A `formatter` replaces the whole tooltip row, so it renders
-  the label as well. The axis uses `priceWithoutDecimalsFormat`.
+  the label as well. The axis uses `priceWithoutDecimalsFormat` from `@foodordering/core/format`.
+- Recharts 3.10 types the `labelFormatter` value as `ReactNode` (3.8 had a string), so the charts call
+  `new Date(String(value))`.
 - Colors: `--chart-1` (blue) for counts, `--chart-2` (orange) for money, in `globals.css`. The shadcn preset ships gray
   chart colors; these have separate light and dark values, checked for color-blind separation and contrast against the
   card background in each theme.
@@ -373,5 +384,5 @@ demo order gets its own `demo_<uuid>`. Running the script twice doubles the data
 
 ## Next step
 
-Session 10b: move the mobile app to Expo SDK 58 (Expo Go on the phone no longer opens SDK 57), then check a push
-notification from a status change end to end. After that, the Supabase CLI v3 upgrade and session 11, Turborepo.
+Session 12, packaging: a screenshot of the dashboard in this README, the list of changes against the course finished,
+and a two-minute spoken walkthrough of the project.
