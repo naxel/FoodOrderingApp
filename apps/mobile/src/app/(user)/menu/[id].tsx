@@ -7,6 +7,7 @@ import { useCart } from '@/providers/CartProvider';
 import { PizzaSize } from '@/types';
 import { useProduct } from '@/api/products';
 import RemoteImage from '@components/RemoteImage';
+import { priceFormat } from '@foodordering/core/format';
 
 const sizes: PizzaSize[] = ['S', 'M', 'L', 'XL'];
 
@@ -72,7 +73,7 @@ const ProductDetailsScreen = () => {
           </Pressable>
         ))}
       </View>
-      <Text style={styles.price}>${product?.price}</Text>
+      <Text style={styles.price}>{product && priceFormat.format(product.price)}</Text>
       <Button onPress={addToCart} text="Add to cart" />
     </View>
   );

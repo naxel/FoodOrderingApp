@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
       new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname === '127.0.0.1',
   },
   partialPrefetching: true,
+  transpilePackages: ['@foodordering/core'],
   turbopack: {
     root: path.join(__dirname, '../..'),
     rules: {

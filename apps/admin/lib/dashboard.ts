@@ -1,4 +1,4 @@
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@foodordering/core/database.types';
 
 export type OrdersPerDay = Database['public']['Functions']['orders_per_day']['Returns'];
 

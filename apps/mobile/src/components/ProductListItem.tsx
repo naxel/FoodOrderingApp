@@ -3,6 +3,7 @@ import Colors from '@/constants/Colors';
 import { Product } from '@/types';
 import { Link, useSegments } from 'expo-router';
 import RemoteImage from '@components/RemoteImage';
+import { priceFormat } from '@foodordering/core/format';
 
 type ProductListItemProps = {
   product: Product;
@@ -24,7 +25,7 @@ const ProductListItem = ({ product }: ProductListItemProps) => {
           resizeMode="contain"
         />
         <Text style={styles.title}>{product.name}</Text>
-        <Text style={styles.price}>${product.price}</Text>
+        <Text style={styles.price}>{product && priceFormat.format(product.price)}</Text>
       </Pressable>
     </Link>
   );

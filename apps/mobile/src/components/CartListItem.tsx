@@ -6,6 +6,7 @@ import { defaultPizzaImage } from '@components/ProductListItem';
 import { useCart } from '@/providers/CartProvider';
 import { SymbolView } from 'expo-symbols';
 import RemoteImage from '@components/RemoteImage';
+import { priceFormat } from '@foodordering/core/format';
 
 type CartListItemProps = {
   cartItem: CartItem;
@@ -24,7 +25,7 @@ const CartListItem = ({ cartItem }: CartListItemProps) => {
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{cartItem.product.name}</Text>
         <View style={styles.subtitleContainer}>
-          <Text style={styles.price}>${cartItem.product.price.toFixed(2)}</Text>
+          <Text style={styles.price}>{priceFormat.format(cartItem.product.price)}</Text>
           <Text>Size: {cartItem.size}</Text>
         </View>
       </View>

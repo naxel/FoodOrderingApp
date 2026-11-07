@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { ProductRowActions } from '@/components/product-row-actions';
 import { ListSkeleton } from '@/components/list-skeleton';
 import { Suspense } from 'react';
-import { priceFormat } from '@/lib/format';
+import { priceFormat } from '@foodordering/core/format';
 import { productImageUrl } from '@/lib/storage';
 
 async function ProductsTable() {

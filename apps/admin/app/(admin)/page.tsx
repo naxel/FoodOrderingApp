@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { priceFormat } from '@/lib/format';
+import { priceFormat } from '@foodordering/core/format';
 import { OrdersChart } from '@/components/orders-chart';
 import { TopProductsChart } from '@/components/top-products-chart';
 import { RevenueChart } from '@/components/revenue-chart';

@@ -12,8 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dateFormat, priceFormat } from '@/lib/format';
-import { isOrderStatus, ORDER_STATUSES } from '@/lib/orders';
+import { dateFormat } from '@/lib/format';
+import { priceFormat } from '@foodordering/core/format';
+import { isOrderStatus, ORDER_STATUSES } from '@foodordering/core/orders';
 import { OrderStatusBadge } from '@/components/order-status-badge';
 import { OrdersRealtime } from '@/components/orders-realtime';
 

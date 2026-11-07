@@ -13,6 +13,8 @@
     "typecheck": "turbo run typecheck",
     "mobile": "npm run start -w @foodordering/mobile",
     "admin": "npm run dev -w @foodordering/admin",
+    "gen:types": "supabase gen types typescript > packages/core/src/database.types.ts && prettier --write packages/core/src/database.types.ts",
+    "gen:types:remote": "supabase gen types typescript --remote > packages/core/src/database.types.ts && prettier --write packages/core/src/database.types.ts",
     "supabase:restart": "supabase stop && supabase start",
     "functions:serve": "supabase functions serve",
     "functions:logs": "docker logs -f supabase_edge_runtime_FoodOrdering"

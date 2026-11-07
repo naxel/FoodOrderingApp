@@ -5,6 +5,7 @@ import { SymbolView } from 'expo-symbols';
 import Colors from '@/constants/Colors';
 import { useProduct } from '@/api/products';
 import RemoteImage from '@components/RemoteImage';
+import { priceFormat } from '@foodordering/core/format';
 
 const ProductDetailsScreen = () => {
   const { id: idString } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +47,7 @@ const ProductDetailsScreen = () => {
         resizeMode="contain"
       />
       <Text style={styles.title}>{product?.name}</Text>
-      <Text style={styles.price}>${product?.price}</Text>
+      <Text style={styles.price}>{product && priceFormat.format(product.price)}</Text>
     </View>
   );
 };

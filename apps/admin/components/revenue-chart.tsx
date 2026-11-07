@@ -7,7 +7,8 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { dayFormat, priceFormat, priceWithoutDecimalsFormat } from '@/lib/format';
+import { dayFormat } from '@/lib/format';
+import { priceFormat, priceWithoutDecimalsFormat } from '@foodordering/core/format';
 import { OrdersPerDay } from '@/lib/dashboard';
 
 const chartConfig = {

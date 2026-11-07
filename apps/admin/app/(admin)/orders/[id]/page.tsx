@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Suspense } from 'react';
 import { ListSkeleton } from '@/components/list-skeleton';
-import { dateFormat, priceFormat } from '@/lib/format';
+import { dateFormat } from '@/lib/format';
+import { priceFormat } from '@foodordering/core/format';
 import { OrderStatusBadge } from '@/components/order-status-badge';
 import {
   Table,
@@ -19,7 +20,7 @@ import { productImageUrl } from '@/lib/storage';
 import { ArrowLeft, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrderStatusSelect } from '@/components/order-status-select';
-import { isOrderStatus } from '@/lib/orders';
+import { isOrderStatus } from '@foodordering/core/orders';
 import { OrdersRealtime } from '@/components/orders-realtime';
 
 type Params = PageProps<'/orders/[id]'>['params'];

@@ -1,6 +1,6 @@
 'use server';
 import { refresh } from 'next/cache';
-import { isOrderStatus, OrderStatus } from '@/lib/orders';
+import { isOrderStatus, OrderStatus } from '@foodordering/core/orders';
 import { createClient } from '@/lib/supabase/server';
 import { functionErrorMessage } from '@/lib/functions';
 

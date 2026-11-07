@@ -1,0 +1,13 @@
+{
+  "name": "@foodordering/core",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./database.types": "./src/database.types.ts",
+    "./orders": "./src/orders.ts",
+    "./format": "./src/format.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

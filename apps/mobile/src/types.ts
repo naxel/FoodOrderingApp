@@ -1,4 +1,5 @@
-import { Database } from './database.types';
+import { Database } from '@foodordering/core/database.types';
+export type { OrderStatus } from '@foodordering/core/orders';
 
 export type Tables<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
@@ -19,10 +20,6 @@ export type CartItem = {
   size: PizzaSize;
   quantity: number;
 };
-
-export const OrderStatusList: OrderStatus[] = ['New', 'Cooking', 'Delivering', 'Delivered'];
-
-export type OrderStatus = 'New' | 'Cooking' | 'Delivering' | 'Delivered';
 
 export type Order = Tables<'orders'>;
 

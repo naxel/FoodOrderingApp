@@ -4,6 +4,7 @@ import Colors from '../constants/Colors';
 import { Tables } from '@/types';
 import { defaultPizzaImage } from './ProductListItem';
 import RemoteImage from '@components/RemoteImage';
+import { priceFormat } from '@foodordering/core/format';
 
 type OrderItemListItemProps = {
   item: { products: Tables<'products'> } & Tables<'order_items'>;
@@ -21,7 +22,7 @@ const OrderItemListItem = ({ item }: OrderItemListItemProps) => {
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{item.products.name}</Text>
         <View style={styles.subtitleContainer}>
-          <Text style={styles.price}>${item.products.price.toFixed(2)}</Text>
+          <Text style={styles.price}>{priceFormat.format(item.products.price)}</Text>
           <Text>Size: {item.size}</Text>
         </View>
       </View>

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { productSchema } from '@/lib/schemas/product';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/database.types';
+import { Database } from '@foodordering/core/database.types';
 
 export async function createProduct(formData: FormData) {
   const parsed = parseProductForm(formData);

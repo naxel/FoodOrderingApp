@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ORDER_STATUSES, OrderStatus } from '@/lib/orders';
+import { ORDER_STATUSES, OrderStatus } from '@foodordering/core/orders';
 import { useLayoutEffect, useOptimistic, useState, useTransition } from 'react';
 import { updateOrderStatus } from '@/app/(admin)/orders/actions';
 

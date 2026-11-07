@@ -10,7 +10,8 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import OrderListItem from '@components/OrderListItem';
 import OrderItemListItem from '@components/OrderItemListItem';
-import { OrderStatus, OrderStatusList } from '@/types';
+import { OrderStatus } from '@/types';
+import { ORDER_STATUSES } from '@foodordering/core/orders';
 import Colors from '@/constants/Colors';
 import { useOrderDetails, useUpdateOrderStatus } from '@/api/orders';
 
@@ -50,7 +51,7 @@ const OrderDetailScreen = () => {
           <>
             <Text style={{ fontWeight: 'bold' }}>Status</Text>
             <View style={{ flexDirection: 'row', gap: 5 }}>
-              {OrderStatusList.map((status) => (
+              {ORDER_STATUSES.map((status) => (
                 <Pressable
                   key={status}
                   onPress={() => updateStatus(status)}
