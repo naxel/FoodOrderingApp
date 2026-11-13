@@ -17,12 +17,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.background,
-        tabBarInactiveTintColor: 'gainsboro',
+        tabBarActiveTintColor: Colors.light.tint,
+        tabBarInactiveTintColor: '#8E8E93',
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation v6.
         headerShown,
-        tabBarStyle: { backgroundColor: Colors.light.tint },
+        // dark bar in both themes marks the admin side apart from the user tabs
+        tabBarStyle: { backgroundColor: '#1C1C1E', borderTopColor: '#2C2C2E' },
       }}
     >
       <Tabs.Screen name="index" options={{ href: null }} />
