@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, Image, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert } from 'react-native';
 import React, { useState } from 'react';
 import { defaultPizzaImage } from '@components/ProductListItem';
 import Colors from '@/constants/Colors';
 import Button from '@components/Button';
+import FormInput from '@components/FormInput';
+import RemoteImage from '@components/RemoteImage';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { MediaType } from 'expo-image-picker/src/ImagePicker.types';
@@ -10,6 +12,7 @@ import { useDeleteProduct, useInsertProduct, useProduct, useUpdateProduct } from
 import { randomUUID } from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import { File } from 'expo-file-system';
+import { Product } from '@/types';
 
 const CreateScreen = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -26,7 +29,8 @@ const CreateScreen = () => {
   const { mutate: updateProduct } = useUpdateProduct();
   const { data: updatingProduct } = useProduct(id);
   const { mutate: deleteProduct } = useDeleteProduct();
-  const [loadedProduct, setLoadedProduct] = useState(updatingProduct);
+  // starts empty: when the product is already cached, useState(updatingProduct) would never fill the form
+  const [loadedProduct, setLoadedProduct] = useState<Product>();
   if (updatingProduct && updatingProduct !== loadedProduct) {
     setLoadedProduct(updatingProduct);
     setName(updatingProduct.name);
@@ -83,10 +87,9 @@ const CreateScreen = () => {
           resetFields();
           router.back();
         },
+        onError: (error) => Alert.alert('Failed to update product', error.message),
       },
     );
-    resetFields();
-    router.back();
   };
 
   const onCreate = async () => {
@@ -106,6 +109,7 @@ const CreateScreen = () => {
           resetFields();
           router.back();
         },
+        onError: (error) => Alert.alert('Failed to create product', error.message),
       },
     );
   };
@@ -116,6 +120,7 @@ const CreateScreen = () => {
         resetFields();
         router.replace('/(admin)');
       },
+      onError: (error) => Alert.alert('Failed to delete product', error.message),
     });
   };
 
@@ -172,30 +177,28 @@ const CreateScreen = () => {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: isUpdating ? 'Update Product' : 'Create Product' }} />
-      <Image
-        source={{ uri: image || defaultPizzaImage }}
-        style={styles.image}
-        resizeMode="contain"
-      />
+      {/* a freshly picked file is local; a saved one is a path in the product-images bucket */}
+      {image?.startsWith('file://') ? (
+        <Image source={{ uri: image }} style={styles.image} resizeMode="contain" />
+      ) : (
+        <RemoteImage
+          path={image}
+          fallback={defaultPizzaImage}
+          style={styles.image}
+          resizeMode="contain"
+        />
+      )}
       <Text onPress={pickImage} style={styles.textButton}>
         Select Image
       </Text>
 
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Margarita..."
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Price ($)</Text>
-      <TextInput
+      <FormInput label="Name" value={name} onChangeText={setName} placeholder="Margarita..." />
+      <FormInput
+        label="Price ($)"
         value={price}
         onChangeText={setPrice}
         placeholder="9.99"
-        style={styles.input}
-        keyboardType="numeric"
+        keyboardType="decimal-pad"
       />
       <Text style={styles.error}>{errors}</Text>
       <Button onPress={onSubmit} text={isUpdating ? 'Update' : 'Create'} />
@@ -209,7 +212,7 @@ const CreateScreen = () => {
 };
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
+    padding: 16,
   },
   image: {
     width: '50%',
@@ -221,18 +224,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.light.tint,
     marginVertical: 10,
-  },
-  label: {
-    color: 'gray',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'gray',
-    padding: 10,
-    marginTop: 5,
-    marginBottom: 20,
-    backgroundColor: 'white',
-    borderRadius: 5,
   },
   error: {
     color: 'red',
