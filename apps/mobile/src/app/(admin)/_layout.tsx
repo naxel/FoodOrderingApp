@@ -5,13 +5,17 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabLayout() {
-  const { isAdmin, loading } = useAuth();
+  const { session, isAdmin, loading } = useAuth();
   const headerShown = useClientOnlyValue(false, true);
   if (loading) {
     return null;
   }
+  // explicit targets: "/" from inside this group resolves to (admin)/index and loops back here
+  if (!session) {
+    return <Redirect href="/sign-in" />;
+  }
   if (!isAdmin) {
-    return <Redirect href="/" />;
+    return <Redirect href="/(user)/menu" />;
   }
 
   return (
