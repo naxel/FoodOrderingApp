@@ -21,16 +21,21 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   useEffect(() => {
+    let latestLoad = 0;
     const loadProfile = async (session: Session | null) => {
+      const load = ++latestLoad;
       let profile: Profile | null = null;
       if (session) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
+        if (error) console.warn('load profile failed', error);
         profile = data || null;
       }
+      // a slower load from an older auth event (e.g. before sign-out) must not overwrite a newer one
+      if (load !== latestLoad) return;
       setSession(session);
       setProfile(profile);
       setLoading(false);
@@ -55,3 +60,18 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+// The push token belongs to the device, not the account: clear it so the next user on this phone
+// doesn't get our order updates
+export const signOut = async () => {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (userId) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ expo_push_token: null })
+      .eq('id', userId);
+    if (error) console.warn('clear push token failed', error);
+  }
+  await supabase.auth.signOut();
+};

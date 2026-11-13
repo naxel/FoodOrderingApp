@@ -1,5 +1,5 @@
 import { Image } from 'react-native';
-import React, { ComponentProps, useEffect, useState } from 'react';
+import React, { ComponentProps } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type RemoteImageProps = {
@@ -7,33 +7,13 @@ type RemoteImageProps = {
   fallback: string;
 } & Omit<ComponentProps<typeof Image>, 'source'>;
 
+// product-images is a public bucket, so a plain URL is enough and the native image cache does the rest
 const RemoteImage = ({ path, fallback, ...imageProps }: RemoteImageProps) => {
-  const [image, setImage] = useState('');
+  const uri = path
+    ? supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
+    : fallback;
 
-  useEffect(() => {
-    if (!path) return;
-    (async () => {
-      setImage('');
-      const { data, error } = await supabase.storage.from('product-images').download(path);
-
-      if (error) {
-        console.log(error);
-      }
-
-      if (data) {
-        const fr = new FileReader();
-        fr.readAsDataURL(data);
-        fr.onload = () => {
-          setImage(fr.result as string);
-        };
-      }
-    })();
-  }, [path]);
-
-  if (!image) {
-  }
-
-  return <Image source={{ uri: image || fallback }} {...imageProps} />;
+  return <Image source={{ uri }} {...imageProps} />;
 };
 
 export default RemoteImage;
