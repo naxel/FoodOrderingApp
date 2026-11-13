@@ -36,14 +36,18 @@ export const initialisePaymentSheet = async (items: PaymentCartItem[]) => {
 
   if (!publishableKey || !paymentIntent) return null;
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const { error } = await initPaymentSheet({
-    merchantDisplayName: 'Example, Inc.',
+    // shown in the sheet, e.g. "Save payment details to FoodOrdering"
+    merchantDisplayName: 'FoodOrdering',
     customerId: customer,
     customerSessionClientSecret,
     paymentIntentClientSecret: paymentIntent,
     defaultBillingDetails: {
-      name: 'Jane Doe',
-      // email: 'test@test.com',
+      email: session?.user.email,
     },
   });
   if (error) {

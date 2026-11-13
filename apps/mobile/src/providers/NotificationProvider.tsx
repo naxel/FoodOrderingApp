@@ -14,12 +14,20 @@ const NotificationProvider = ({ children }: PropsWithChildren) => {
       .then(setExpoPushToken)
       .catch((e) => console.warn('push registration failed', e));
 
-    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+    const openOrder = (response: Notifications.NotificationResponse) => {
       const orderId = response.notification.request.content.data?.orderId;
       if (typeof orderId === 'number') {
-        router.push(`/(user)/orders/${orderId}`);
+        router.push(`/(user)/orders/${orderId}`, { withAnchor: true });
       }
-    });
+    };
+
+    // A tap that cold-started the app happened before the listener below existed
+    const launchResponse = Notifications.getLastNotificationResponse();
+    if (launchResponse) {
+      Notifications.clearLastNotificationResponse();
+      openOrder(launchResponse);
+    }
+    const responseListener = Notifications.addNotificationResponseReceivedListener(openOrder);
 
     return () => {
       responseListener.remove();
