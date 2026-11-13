@@ -6,9 +6,13 @@ type ButtonProps = {
   text: string;
 } & React.ComponentProps<typeof Pressable>;
 
-const Button = ({ text, ...pressableProps }: ButtonProps) => {
+const Button = ({ text, disabled, ...pressableProps }: ButtonProps) => {
   return (
-    <Pressable {...pressableProps} style={styles.container}>
+    <Pressable
+      {...pressableProps}
+      disabled={disabled}
+      style={[styles.container, disabled && styles.disabled]}
+    >
       <Text style={styles.text}>{text}</Text>
     </Pressable>
   );
@@ -26,6 +30,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
 
