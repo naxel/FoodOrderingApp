@@ -45,6 +45,9 @@ All from the repo root.
 | `npm run functions:serve`  | `supabase functions serve`                                                       |
 | `npm run functions:logs`   | `docker logs -f supabase_edge_runtime_FoodOrdering`                              |
 
+Turborepo does not pass keyboard input to tasks, so in `npm run dev` Expo prints its menu but ignores the keys.
+To open the simulator, run `npm run mobile` in one terminal (press `i`) and `npm run admin` in another.
+
 Turborepo caches `lint`, `typecheck` and `build`: a second run with no changes prints `FULL TURBO` and replays the
 output. `npx turbo run lint typecheck --force` ignores the cache. Turborepo 2 runs tasks in strict env mode, so an
 environment variable that the admin build reads must be listed in `env` in `turbo.json`; otherwise it does not reach
