@@ -1,27 +1,19 @@
-import {
-  View,
-  Text,
-  TextInput,
-  type TextInputInstance,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Keyboard,
-} from 'react-native';
-import React, { useState, useRef } from 'react';
-import Button from '../../components/Button';
-import Colors from '../../constants/Colors';
-import { Link, Stack } from 'expo-router';
+import { StyleSheet, Text, type TextInputInstance } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { SymbolView } from 'expo-symbols';
+import Button from '@/components/Button';
+import FormInput from '@/components/FormInput';
+import AuthScreen from '@/components/AuthScreen';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 
 const SignInScreen = () => {
+  const theme = Colors[useColorScheme()];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const passwordRef = useRef<TextInputInstance>(null);
 
   async function signInWithEmail() {
@@ -35,121 +27,67 @@ const SignInScreen = () => {
   const canSubmit = email.trim() !== '' && password !== '' && !loading;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <AuthScreen
+      title="Welcome back"
+      subtitle="Sign in to order your favourite pizza"
+      footer={
+        <Text style={[styles.footerText, { color: theme.muted }]}>
+          Don&apos;t have an account?{' '}
+          <Link href="/sign-up" replace style={styles.link}>
+            Sign up
+          </Link>
+        </Text>
+      }
     >
-      <Stack.Screen options={{ title: 'Sign in' }} />
-      <Pressable style={styles.container} onPress={Keyboard.dismiss} accessible={false}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError('');
-          }}
-          placeholder="jon@gmail.com"
-          style={styles.input}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          textContentType="emailAddress"
-          returnKeyType="next"
-          onSubmitEditing={() => passwordRef.current?.focus()}
-          submitBehavior="submit"
-        />
+      <FormInput
+        value={email}
+        onChangeText={(text) => {
+          setEmail(text);
+          setError('');
+        }}
+        placeholder="Email"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        submitBehavior="submit"
+      />
+      <FormInput
+        ref={passwordRef}
+        value={password}
+        onChangeText={(text) => {
+          setPassword(text);
+          setError('');
+        }}
+        placeholder="Password"
+        secure
+        textContentType="password"
+        autoComplete="password"
+        returnKeyType="go"
+        onSubmitEditing={() => {
+          if (canSubmit) signInWithEmail();
+        }}
+      />
+      <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
 
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordRow}>
-          <TextInput
-            ref={passwordRef}
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setError('');
-            }}
-            style={[styles.input, styles.passwordInput]}
-            secureTextEntry={!showPassword}
-            textContentType="password"
-            autoComplete="password"
-            returnKeyType="go"
-            onSubmitEditing={() => {
-              if (canSubmit) signInWithEmail();
-            }}
-          />
-          <Pressable
-            onPress={() => setShowPassword((v) => !v)}
-            style={styles.eye}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-          >
-            <SymbolView
-              name={{
-                ios: showPassword ? 'eye.slash' : 'eye',
-                android: showPassword ? 'visibility_off' : 'visibility',
-                web: showPassword ? 'visibility_off' : 'visibility',
-              }}
-              tintColor="gray"
-              size={20}
-            />
-          </Pressable>
-        </View>
-        <Text style={styles.error}>{error}</Text>
-
-        <Button
-          onPress={signInWithEmail}
-          disabled={!canSubmit}
-          text={loading ? 'Signing in...' : 'Sign in'}
-        />
-        <Link href="/sign-up" style={styles.textButton}>
-          Create an account
-        </Link>
-      </Pressable>
-    </KeyboardAvoidingView>
+      <Button onPress={signInWithEmail} disabled={!canSubmit} loading={loading} text="Sign in" />
+    </AuthScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    justifyContent: 'center',
-    flex: 1,
-  },
-  label: {
-    color: 'gray',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'gray',
-    padding: 10,
-    marginTop: 5,
-    marginBottom: 20,
-    backgroundColor: 'white',
-    borderRadius: 5,
-  },
-  textButton: {
-    alignSelf: 'center',
-    fontWeight: 'bold',
-    color: Colors.light.tint,
-    marginVertical: 10,
-  },
   error: {
-    color: '#D93025',
-    marginBottom: 10,
+    minHeight: 20,
+    marginBottom: 4,
   },
-  passwordRow: {
-    justifyContent: 'center',
+  footerText: {
+    fontSize: 15,
   },
-  passwordInput: {
-    paddingRight: 44,
-  },
-  eye: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    right: 12,
-    top: 14,
+  link: {
+    color: Colors.light.tint,
+    fontWeight: '600',
   },
 });
 

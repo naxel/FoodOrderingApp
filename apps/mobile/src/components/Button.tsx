@@ -1,19 +1,24 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import Colors from '../constants/Colors';
 
 type ButtonProps = {
   text: string;
+  loading?: boolean;
 } & React.ComponentProps<typeof Pressable>;
 
-const Button = ({ text, disabled, ...pressableProps }: ButtonProps) => {
+const Button = ({ text, loading, disabled, ...pressableProps }: ButtonProps) => {
   return (
     <Pressable
       {...pressableProps}
-      disabled={disabled}
-      style={[styles.container, disabled && styles.disabled]}
+      disabled={disabled || loading}
+      style={({ pressed }) => [
+        styles.container,
+        disabled && !loading && styles.disabled,
+        pressed && styles.pressed,
+      ]}
     >
-      <Text style={styles.text}>{text}</Text>
+      {loading ? <ActivityIndicator color="white" /> : <Text style={styles.text}>{text}</Text>}
     </Pressable>
   );
 };
@@ -21,18 +26,22 @@ const Button = ({ text, disabled, ...pressableProps }: ButtonProps) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.light.tint,
-    padding: 15,
+    height: 52,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 100,
-    marginVertical: 10,
+    borderRadius: 12,
+    marginVertical: 8,
   },
   text: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: 'white',
   },
   disabled: {
     opacity: 0.5,
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });
 
